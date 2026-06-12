@@ -1,7 +1,7 @@
 <script setup>
 import HeroActions from '../components/HeroActions.vue'
 
-const backgroundUrl = '/bg.png'
+const backgroundUrl = `${import.meta.env.BASE_URL}bg.png`
 
 const heroActions = [
   { label: 'Characters', to: '/Characters' },
