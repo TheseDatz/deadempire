@@ -5,6 +5,7 @@ import BestiaryView from '../views/BestiaryView.vue'
 import CharactersView from '../views/CharactersView.vue'
 import CombatView from '../views/CombatView.vue'
 import FactionsView from '../views/FactionsView.vue'
+import MapView from '../views/MapView.vue'
 import PlaceholderView from '../views/PlaceholderView.vue'
 import PlanetsView from '../views/PlanetsView.vue'
 import PlayerCharacterView from '../views/PlayerCharacterView.vue'
@@ -77,6 +78,11 @@ const router = createRouter({
       path: '/Factions',
       name: 'factions',
       component: FactionsView,
+    },
+    {
+      path: '/map',
+      name: 'map',
+      component: MapView,
     },
     {
       path: '/Rules',
