@@ -20,7 +20,7 @@
         class="header-wing justify-start rounded-br-sm border-b border-[#4fc3ff]/70 bg-gradient-to-b from-[#182533]/95 to-[#091018]/95 pl-5"
       >
         <RouterLink class="header-link header-link-red" to="/Rules">Rules Reference</RouterLink>
-        <RouterLink class="header-link header-link-red" to="/Game-Log">Game Log</RouterLink>
+        <RouterLink class="header-link header-link-red" to="/log">Game Log</RouterLink>
       </nav>
     </div>
   </header>

@@ -149,7 +149,8 @@ const healthStates = ['Healthy', 'Stunned', 'Wounded', 'Incapacitated', 'Mortall
       </header>
 
       <section class="sheet-grid mt-8">
-        <div class="sheet-panel lg:col-span-2">
+        <div class="sheet-panel">
+          <h2 class="sheet-heading">Character Bio</h2>
           <div class="sheet-field-grid">
             <label v-for="field in sheetFields" :key="field.label" class="sheet-field">
               <span>{{ field.label }}</span>
@@ -179,9 +180,18 @@ const healthStates = ['Healthy', 'Stunned', 'Wounded', 'Incapacitated', 'Mortall
             <span>Character Illustration</span>
             <input v-model="sheet.photo" />
           </label>
+          <section class="mt-5">
+            <h2 class="sheet-heading">Health</h2>
+            <div class="mt-4 space-y-3">
+              <label v-for="state in healthStates" :key="state" class="health-row">
+                <span>{{ state }}</span>
+                <input v-model="health" type="radio" name="health" :value="state" />
+              </label>
+            </div>
+          </section>
         </aside>
 
-        <section class="sheet-panel lg:row-span-2">
+        <section class="sheet-panel sheet-panel-full">
           <h2 class="sheet-heading">Attributes & Skills</h2>
           <div class="mt-4 grid gap-5 sm:grid-cols-2">
             <div v-for="attribute in sheet.attributes ?? []" :key="attribute.name" class="attribute-block">
@@ -249,15 +259,9 @@ const healthStates = ['Healthy', 'Stunned', 'Wounded', 'Incapacitated', 'Mortall
         </section>
 
         <section class="sheet-panel">
-          <div class="flex items-start justify-between gap-4">
+          <div class="sheet-section-header">
             <h2 class="sheet-heading">Equipment</h2>
-            <div class="flex items-start gap-3">
-              <label class="sheet-inline-field max-w-32">
-                <span>Credits</span>
-                <input v-model="sheet.credits" />
-              </label>
-              <button class="sheet-add-button mt-5" type="button" @click="addEquipment">Add</button>
-            </div>
+            <button class="sheet-add-button" type="button" @click="addEquipment">Add</button>
           </div>
           <div class="mt-4 space-y-2">
             <div
@@ -276,8 +280,11 @@ const healthStates = ['Healthy', 'Stunned', 'Wounded', 'Incapacitated', 'Mortall
         </section>
 
         <section class="sheet-panel">
-          <h2 class="sheet-heading">Background</h2>
-          <textarea v-model="sheet.background" class="mt-4 min-h-36" />
+          <h2 class="sheet-heading">Money</h2>
+          <label class="sheet-field mt-4">
+            <span>Credits</span>
+            <input v-model="sheet.credits" />
+          </label>
         </section>
 
         <section class="sheet-panel">
@@ -310,14 +317,9 @@ const healthStates = ['Healthy', 'Stunned', 'Wounded', 'Incapacitated', 'Mortall
           </div>
         </section>
 
-        <section class="sheet-panel">
-          <h2 class="sheet-heading">Health</h2>
-          <div class="mt-4 space-y-3">
-            <label v-for="state in healthStates" :key="state" class="health-row">
-              <span>{{ state }}</span>
-              <input v-model="health" type="radio" name="health" :value="state" />
-            </label>
-          </div>
+        <section class="sheet-panel sheet-panel-full">
+          <h2 class="sheet-heading">Background</h2>
+          <textarea v-model="sheet.background" class="mt-4 min-h-36" />
         </section>
       </section>
 

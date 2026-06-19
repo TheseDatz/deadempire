@@ -5,6 +5,8 @@ import BestiaryView from '../views/BestiaryView.vue'
 import CharactersView from '../views/CharactersView.vue'
 import CombatView from '../views/CombatView.vue'
 import FactionsView from '../views/FactionsView.vue'
+import GameLogEntryView from '../views/GameLogEntryView.vue'
+import GameLogView from '../views/GameLogView.vue'
 import MapView from '../views/MapView.vue'
 import PlaceholderView from '../views/PlaceholderView.vue'
 import PlanetsView from '../views/PlanetsView.vue'
@@ -90,10 +92,15 @@ const router = createRouter({
       component: RulesView,
     },
     {
-      path: '/Game-Log',
+      path: '/log',
       name: 'game-log',
-      component: PlaceholderView,
-      props: { title: 'Game Log' },
+      component: GameLogView,
+      alias: '/Game-Log',
+    },
+    {
+      path: '/log/:logSlug',
+      name: 'game-log-entry',
+      component: GameLogEntryView,
     },
   ],
 })

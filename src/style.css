@@ -394,6 +394,10 @@
       0 10px 28px rgba(0, 0, 0, 0.22);
   }
 
+  .sheet-panel-full {
+    grid-column: 1 / -1;
+  }
+
   .sheet-heading {
     border-bottom: 1px solid rgba(79, 195, 255, 0.28);
     padding-bottom: 8px;
@@ -1587,6 +1591,131 @@
       linear-gradient(135deg, #05090d 0%, #0d1721 48%, #080608 100%);
   }
 
+  .game-log-page {
+    background:
+      radial-gradient(circle at 18% 10%, rgba(79, 195, 255, 0.14), transparent 34%),
+      radial-gradient(circle at 84% 18%, rgba(255, 59, 36, 0.11), transparent 30%),
+      linear-gradient(135deg, #05090d 0%, #0d1721 48%, #080608 100%);
+  }
+
+  .game-log-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 14px;
+    border: 1px solid rgba(79, 195, 255, 0.28);
+    background: rgba(9, 16, 24, 0.58);
+    padding: 16px;
+  }
+
+  .game-log-tools label {
+    display: grid;
+    gap: 7px;
+  }
+
+  .game-log-tools span {
+    color: rgba(217, 245, 255, 0.72);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .game-log-tools input,
+  .game-log-tools select {
+    width: 100%;
+    border: 1px solid rgba(79, 195, 255, 0.32);
+    background: rgba(3, 7, 12, 0.58);
+    padding: 11px 12px;
+    color: #f8fdff;
+    font: inherit;
+    outline: none;
+  }
+
+  .game-log-list {
+    display: grid;
+    gap: 16px;
+  }
+
+  .game-log-card {
+    display: grid;
+    gap: 9px;
+    border: 1px solid rgba(79, 195, 255, 0.3);
+    background: rgba(9, 16, 24, 0.68);
+    padding: 22px;
+    color: inherit;
+    text-decoration: none;
+    box-shadow:
+      inset 0 0 26px rgba(79, 195, 255, 0.04),
+      0 10px 28px rgba(0, 0, 0, 0.22);
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+
+  .game-log-card:hover {
+    border-color: #9be7ff;
+    box-shadow:
+      inset 0 0 26px rgba(79, 195, 255, 0.08),
+      0 0 24px rgba(79, 195, 255, 0.38);
+    transform: translateY(-2px);
+  }
+
+  .game-log-card time,
+  .game-log-entry time {
+    color: #4fc3ff;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .game-log-card h2 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: #f8fdff;
+  }
+
+  .game-log-card p,
+  .game-log-entry header p {
+    color: rgba(217, 245, 255, 0.8);
+    font-weight: 800;
+    line-height: 1.5;
+  }
+
+  .game-log-back-link {
+    display: inline-flex;
+    width: fit-content;
+    border: 1px solid rgba(79, 195, 255, 0.5);
+    background: rgba(79, 195, 255, 0.1);
+    padding: 9px 14px;
+    color: #d9f5ff;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+
+  .game-log-back-link:hover {
+    border-color: #9be7ff;
+    box-shadow: 0 0 18px rgba(79, 195, 255, 0.42);
+    transform: translateY(-1px);
+  }
+
+  .game-log-body {
+    display: grid;
+    gap: 18px;
+    color: rgba(217, 245, 255, 0.84);
+    font-size: 18px;
+    line-height: 1.75;
+  }
+
   .rules-intro {
     display: grid;
     gap: 22px;
@@ -2025,7 +2154,6 @@ input[type='reset'] {
     height: 96px;
   }
 
-  .sheet-grid,
   .sheet-field-grid {
     grid-template-columns: 1fr;
   }
@@ -2060,10 +2188,17 @@ input[type='reset'] {
   .bestiary-charts,
   .bestiary-tools,
   .bestiary-grid,
+  .game-log-tools,
   .planet-grid,
   .planet-detail-grid,
   .faction-grid,
   .faction-facts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .sheet-grid {
     grid-template-columns: 1fr;
   }
 }
