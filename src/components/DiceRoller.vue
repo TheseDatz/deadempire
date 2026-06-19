@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { isDiceRollLoggingConfigured, logDiceRoll } from '../services/diceRollLog'
 
 const route = useRoute()
 const isOpen = ref(false)
@@ -11,6 +12,7 @@ const breakdown = ref([])
 const wildBreakdown = ref([])
 const errorMessage = ref('')
 const isMuted = ref(false)
+const isLoggingEnabled = ref(localStorage.getItem('sw6d-log-dice-rolls') === 'true')
 
 const shouldShow = computed(() => route.path !== '/')
 const total = computed(() => {
@@ -58,7 +60,32 @@ function playDiceSound() {
   window.setTimeout(() => audioContext.close(), 800)
 }
 
-function rollDice() {
+function setLoggingEnabled(value) {
+  isLoggingEnabled.value = value
+  localStorage.setItem('sw6d-log-dice-rolls', `${value}`)
+}
+
+function captureRoll(source, dice, mod) {
+  if (!isLoggingEnabled.value || !result.value) {
+    return
+  }
+
+  logDiceRoll({
+    page: route.fullPath,
+    routeName: route.name,
+    source,
+    diceCount: dice,
+    modifier: mod,
+    subtotal: result.value.subtotal,
+    total: result.value.total,
+    wildTotal: result.value.wildTotal,
+    wildStatus: result.value.wildStatus,
+    wildBreakdown: [...wildBreakdown.value],
+    diceBreakdown: [...breakdown.value],
+  })
+}
+
+function rollDice(source = 'manual') {
   const dice = Number(diceCount.value)
   const mod = Number(modifier.value)
 
@@ -93,6 +120,8 @@ function rollDice() {
     wildTotal,
     wildStatus,
   }
+
+  captureRoll(source, dice, mod)
 }
 
 function rollRequestedDice(event) {
@@ -113,7 +142,7 @@ function rollRequestedDice(event) {
   diceCount.value = nextDiceCount
   modifier.value = nextModifier
   isOpen.value = true
-  rollDice()
+  rollDice('sheet')
 }
 
 onMounted(() => {
@@ -160,6 +189,15 @@ onUnmounted(() => {
               @click="isMuted = !isMuted"
             >
               {{ isMuted ? 'Sound Off' : 'Sound On' }}
+            </button>
+            <button
+              class="dice-sound-button"
+              type="button"
+              :disabled="!isDiceRollLoggingConfigured"
+              :aria-label="isLoggingEnabled ? 'Disable dice roll logging' : 'Enable dice roll logging'"
+              @click="setLoggingEnabled(!isLoggingEnabled)"
+            >
+              Log {{ isLoggingEnabled ? 'On' : 'Off' }}
             </button>
             <button class="dice-close-button" type="button" aria-label="Close dice roller" @click="isOpen = false">
               X
