@@ -1,34 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { planets } from '../data/planets'
 
 const searchTerm = ref('')
 const selectedStatus = ref('All')
-
-const planets = [
-  {
-    name: 'Coruscant',
-    region: 'Core Worlds',
-    color: '#8b949e',
-    status: 'Occupied by Imperial Security Bureau',
-    moons: [
-      {
-        name: 'Habitation Spheres',
-        description: 'Two large spherical space stations housing thousands of people. Yet to be completed.',
-      },
-    ],
-    locations: [
-      {
-        name: 'Senate Building',
-        description: 'Former seat of the galactic senate.',
-      },
-      {
-        name: 'Imperial Palace',
-        description: 'A labyrinthine maze inside a pyramidal structure that used to be the primary residence of the Emperor.',
-      },
-    ],
-    notes: 'A city-world under immense surveillance, with whole districts sealed behind shifting security cordons.',
-  },
-]
 
 const statuses = computed(() => ['All', ...new Set(planets.map((planet) => planet.status))])
 

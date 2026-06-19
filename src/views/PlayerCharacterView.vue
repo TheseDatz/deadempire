@@ -106,14 +106,32 @@ function addEquipment() {
 }
 
 function removeWeapon(index) {
+  const weaponName = weapons.value[index]?.name || 'this weapon'
+
+  if (!window.confirm(`Delete ${weaponName}?`)) {
+    return
+  }
+
   weapons.value.splice(index, 1)
 }
 
 function removeArmor(index) {
+  const armorName = armor.value[index]?.name || 'this armor'
+
+  if (!window.confirm(`Delete ${armorName}?`)) {
+    return
+  }
+
   armor.value.splice(index, 1)
 }
 
 function removeEquipment(index) {
+  const equipmentName = equipment.value[index] || 'this equipment item'
+
+  if (!window.confirm(`Delete ${equipmentName}?`)) {
+    return
+  }
+
   equipment.value.splice(index, 1)
   equipmentPage.value = Math.min(equipmentPage.value, equipmentPageCount.value)
 }

@@ -1,0 +1,18 @@
+{
+  "name": "Imperial Trooper",
+  "role": "Empire",
+  "tagline": "Standard enforcer of the regime.",
+  "move": "10",
+  "stats": "All stats 2D except Dexterity 3D.",
+  "skills": [
+    "Blaster 4D",
+    "Brawling parry 4D",
+    "Dodge 4D",
+    "Brawling 3D"
+  ],
+  "gear": [
+    "Trooper armor: +2D physical, +1D energy, -1D Dexterity and related skills",
+    "Blaster rifle: 5D damage",
+    "Blaster pistol: 4D damage"
+  ]
+}

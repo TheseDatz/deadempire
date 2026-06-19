@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { npcs } from '../data/npcs'
 
 const searchTerm = ref('')
 const selectedRole = ref('All')
@@ -25,31 +26,6 @@ const challengeRows = [
   ['Moderate', '-4D to +4D', '-1D to +1D'],
   ['Serious', '+5D to +14D', '+2D'],
   ['Major', '+15D or more', '+3D or more'],
-]
-
-const npcs = [
-  {
-    name: 'Pig Guard',
-    role: 'Scum',
-    tagline: 'A hulking bodyguard with a pig-like face.',
-    move: '8',
-    stats: 'All stats 2D except Dexterity 3D, Strength 4D.',
-    skills: ['Melee combat: vibroaxe 4D+1', 'Melee parry 3D'],
-    gear: ['Vibroaxe: STR+3D+1 damage'],
-  },
-  {
-    name: 'Imperial Trooper',
-    role: 'Empire',
-    tagline: 'Standard enforcer of the regime.',
-    move: '10',
-    stats: 'All stats 2D except Dexterity 3D.',
-    skills: ['Blaster 4D', 'Brawling parry 4D', 'Dodge 4D', 'Brawling 3D'],
-    gear: [
-      'Trooper armor: +2D physical, +1D energy, -1D Dexterity and related skills',
-      'Blaster rifle: 5D damage',
-      'Blaster pistol: 4D damage',
-    ],
-  },
 ]
 
 const roles = computed(() => ['All', ...new Set(npcs.map((npc) => npc.role))])

@@ -1,0 +1,14 @@
+{
+  "name": "Pig Guard",
+  "role": "Scum",
+  "tagline": "A hulking bodyguard with a pig-like face.",
+  "move": "8",
+  "stats": "All stats 2D except Dexterity 3D, Strength 4D.",
+  "skills": [
+    "Melee combat: vibroaxe 4D+1",
+    "Melee parry 3D"
+  ],
+  "gear": [
+    "Vibroaxe: STR+3D+1 damage"
+  ]
+}

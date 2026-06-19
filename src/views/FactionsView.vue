@@ -1,22 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { factions } from '../data/factions'
 
 const searchTerm = ref('')
 const selectedHostility = ref('All')
-
-const factions = [
-  {
-    name: 'Imperial Security Bureau',
-    borderColor: '#ff3b24',
-    capitalPlanet: 'Coruscant',
-    hostility: 'Hostile',
-    currentLeader: 'Grand Vzier Mas Amedda',
-    description:
-      'Imperial remnants around the Imperial Capital have consolidated beneath the Imperial Security Bureau, much to the dismay of Imperial Navy officers. In-fighting is rampant and the power structure is rapidly shifting and changing.',
-    notes:
-      'While Mas Amedda is the crowned leader of the Empire underneath the ISB, rumours suggest he has very little control of things.',
-  },
-]
 
 const hostilityLevels = computed(() => ['All', ...new Set(factions.map((faction) => faction.hostility))])
 

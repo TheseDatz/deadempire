@@ -22,7 +22,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-[#0c0c0b] px-6 pb-16 pt-32 text-stone-100">
+  <main class="galaxy-page min-h-screen px-6 pb-16 pt-32 text-stone-100">
     <div class="mx-auto max-w-6xl">
       <h1 class="font-serif text-5xl font-bold text-[#4fc3ff]">Characters</h1>
 
