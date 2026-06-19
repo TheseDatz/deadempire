@@ -17,21 +17,12 @@ create table if not exists public.dice_rolls (
 alter table public.dice_rolls enable row level security;
 
 revoke all on table public.dice_rolls from anon, authenticated;
-grant insert on table public.dice_rolls to anon;
+grant insert on table public.dice_rolls to anon, authenticated;
 
+drop policy if exists "Allow public dice roll inserts" on public.dice_rolls;
 drop policy if exists "Allow anonymous dice roll inserts" on public.dice_rolls;
-create policy "Allow anonymous dice roll inserts"
+create policy "Allow public dice roll inserts"
 on public.dice_rolls
 for insert
-to anon
-with check (
-  source in ('manual', 'sheet')
-  and dice_count between 1 and 30
-  and modifier between -99 and 99
-  and subtotal between 1 and 500
-  and total between -98 and 599
-  and wild_total between 1 and 500
-  and wild_status in ('normal', 'critical', 'exploded')
-  and jsonb_typeof(wild_breakdown) = 'array'
-  and jsonb_typeof(dice_breakdown) = 'array'
-);
+to anon, authenticated
+with check (true);

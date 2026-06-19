@@ -86,6 +86,7 @@ function captureRoll(source, dice, mod) {
 }
 
 function rollDice(source = 'manual') {
+  const rollSource = source === 'sheet' ? 'sheet' : 'manual'
   const dice = Number(diceCount.value)
   const mod = Number(modifier.value)
 
@@ -121,7 +122,7 @@ function rollDice(source = 'manual') {
     wildStatus,
   }
 
-  captureRoll(source, dice, mod)
+  captureRoll(rollSource, dice, mod)
 }
 
 function rollRequestedDice(event) {
@@ -217,7 +218,7 @@ onUnmounted(() => {
           </label>
         </div>
 
-        <button class="dice-roll-button mt-6" type="button" @click="rollDice">Roll</button>
+        <button class="dice-roll-button mt-6" type="button" @click="rollDice()">Roll</button>
 
         <p v-if="errorMessage" class="mt-4 text-sm font-semibold text-red-200">{{ errorMessage }}</p>
 
