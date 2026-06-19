@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -10,6 +10,7 @@ const result = ref(null)
 const breakdown = ref([])
 const wildBreakdown = ref([])
 const errorMessage = ref('')
+const isMuted = ref(false)
 
 const shouldShow = computed(() => route.path !== '/')
 const total = computed(() => {
@@ -21,6 +22,10 @@ const total = computed(() => {
 })
 
 function playDiceSound() {
+  if (isMuted.value) {
+    return
+  }
+
   const AudioContext = window.AudioContext || window.webkitAudioContext
 
   if (!AudioContext) {
@@ -29,19 +34,19 @@ function playDiceSound() {
 
   const audioContext = new AudioContext()
   const masterGain = audioContext.createGain()
-  masterGain.gain.setValueAtTime(0.16, audioContext.currentTime)
+  masterGain.gain.setValueAtTime(0.5, audioContext.currentTime)
   masterGain.connect(audioContext.destination)
 
-  for (let index = 0; index < 12; index += 1) {
+  for (let index = 0; index < 16; index += 1) {
     const oscillator = audioContext.createOscillator()
     const gain = audioContext.createGain()
-    const start = audioContext.currentTime + index * 0.035
-    const duration = 0.028 + Math.random() * 0.03
+    const start = audioContext.currentTime + index * 0.03
+    const duration = 0.04 + Math.random() * 0.04
 
     oscillator.type = 'triangle'
     oscillator.frequency.setValueAtTime(140 + Math.random() * 520, start)
     gain.gain.setValueAtTime(0.001, start)
-    gain.gain.exponentialRampToValueAtTime(0.18, start + 0.006)
+    gain.gain.exponentialRampToValueAtTime(0.34, start + 0.006)
     gain.gain.exponentialRampToValueAtTime(0.001, start + duration)
 
     oscillator.connect(gain)
@@ -89,6 +94,35 @@ function rollDice() {
     wildStatus,
   }
 }
+
+function rollRequestedDice(event) {
+  const nextDiceCount = Number(event.detail?.diceCount)
+  const nextModifier = Number(event.detail?.modifier ?? 0)
+
+  if (
+    !Number.isInteger(nextDiceCount) ||
+    nextDiceCount < 1 ||
+    nextDiceCount > 30 ||
+    !Number.isInteger(nextModifier) ||
+    nextModifier < -99 ||
+    nextModifier > 99
+  ) {
+    return
+  }
+
+  diceCount.value = nextDiceCount
+  modifier.value = nextModifier
+  isOpen.value = true
+  rollDice()
+}
+
+onMounted(() => {
+  window.addEventListener('sw6d-roll-dice', rollRequestedDice)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('sw6d-roll-dice', rollRequestedDice)
+})
 </script>
 
 <template>
@@ -118,9 +152,19 @@ function rollDice() {
             <p class="text-xs font-bold uppercase tracking-[0.26em] text-cyan-100/70">Dead Empire</p>
             <h2 class="mt-1 font-serif text-3xl font-bold text-[#4fc3ff]">Dice Roller</h2>
           </div>
-          <button class="dice-close-button" type="button" aria-label="Close dice roller" @click="isOpen = false">
-            X
-          </button>
+          <div class="dice-panel-actions">
+            <button
+              class="dice-sound-button"
+              type="button"
+              :aria-label="isMuted ? 'Unmute dice sound' : 'Mute dice sound'"
+              @click="isMuted = !isMuted"
+            >
+              {{ isMuted ? 'Sound Off' : 'Sound On' }}
+            </button>
+            <button class="dice-close-button" type="button" aria-label="Close dice roller" @click="isOpen = false">
+              X
+            </button>
+          </div>
         </div>
 
         <div class="dice-form mt-6">

@@ -16,6 +16,8 @@ const sheet = ref({})
 const weapons = ref([])
 const armor = ref([])
 const equipment = ref([])
+const equipmentPage = ref(1)
+const emptySkillRows = ref({})
 const health = ref('Healthy')
 
 const character = computed(() => {
@@ -55,14 +57,40 @@ watch(
     }
     nextSheet.forceSummary = `${nextSheet.force.control ?? '-'} / ${nextSheet.force.sense ?? '-'} / ${nextSheet.force.alter ?? '-'}`
     nextSheet.specialAbilitiesText = (nextSheet.specialAbilities ?? ['No special abilities entered yet.']).join('\n')
+    nextSheet.credits = nextSheet.credits ?? '0'
+    nextSheet.newRepublicCredits = nextSheet.newRepublicCredits ?? '0'
+    nextSheet.peggats = nextSheet.peggats ?? '0'
+    nextSheet.requisitionTokens = nextSheet.requisitionTokens ?? '0'
     sheet.value = nextSheet
     weapons.value = (nextCharacter.weapons ?? []).map((weapon) => ({ ...weapon }))
     armor.value = (nextCharacter.armor ?? []).map((armorItem) => ({ ...armorItem }))
     equipment.value = [...(nextCharacter.equipment ?? [])]
+    equipmentPage.value = 1
+    emptySkillRows.value = Object.fromEntries(
+      (nextSheet.attributes ?? []).map((attribute, index) => [
+        emptySkillKey(attribute, index),
+        Array.from({ length: 3 }, () => ({ name: '', dice: '' })),
+      ]),
+    )
     health.value = nextCharacter.health ?? 'Healthy'
   },
   { immediate: true },
 )
+
+const equipmentItemsPerPage = 5
+
+const equipmentPageCount = computed(() => Math.max(1, Math.ceil(equipment.value.length / equipmentItemsPerPage)))
+
+const equipmentStartIndex = computed(() => (equipmentPage.value - 1) * equipmentItemsPerPage)
+
+const paginatedEquipment = computed(() => {
+  return equipment.value
+    .slice(equipmentStartIndex.value, equipmentStartIndex.value + equipmentItemsPerPage)
+    .map((item, index) => ({
+      item,
+      index: equipmentStartIndex.value + index,
+    }))
+})
 
 function addWeapon() {
   weapons.value.push({ name: '', range: '', damage: '' })
@@ -74,6 +102,7 @@ function addArmor() {
 
 function addEquipment() {
   equipment.value.push('')
+  equipmentPage.value = equipmentPageCount.value
 }
 
 function removeWeapon(index) {
@@ -86,6 +115,19 @@ function removeArmor(index) {
 
 function removeEquipment(index) {
   equipment.value.splice(index, 1)
+  equipmentPage.value = Math.min(equipmentPage.value, equipmentPageCount.value)
+}
+
+function previousEquipmentPage() {
+  equipmentPage.value = Math.max(1, equipmentPage.value - 1)
+}
+
+function nextEquipmentPage() {
+  equipmentPage.value = Math.min(equipmentPageCount.value, equipmentPage.value + 1)
+}
+
+function emptySkillKey(attribute, index) {
+  return `${index}-${attribute.name}`
 }
 
 function exportCharacterJson() {
@@ -108,6 +150,10 @@ function exportCharacterJson() {
     armor: armor.value,
     equipment: equipment.value,
     health: health.value,
+    credits: sheet.value.credits ?? '0',
+    newRepublicCredits: sheet.value.newRepublicCredits ?? '0',
+    peggats: sheet.value.peggats ?? '0',
+    requisitionTokens: sheet.value.requisitionTokens ?? '0',
   }
   delete exportData.forceSummary
   delete exportData.specialAbilitiesText
@@ -135,6 +181,49 @@ const sheetFields = computed(() => [
 ])
 
 const healthStates = ['Healthy', 'Stunned', 'Wounded', 'Incapacitated', 'Mortally Wounded']
+
+function parseDiceCode(value) {
+  const match = String(value ?? '').trim().match(/^(\d+)\s*d(?:\s*([+-])\s*(\d+))?$/i)
+
+  if (!match) {
+    return null
+  }
+
+  const diceCount = Number(match[1])
+  const modifierValue = Number(match[3] ?? 0)
+  const modifier = match[2] === '-' ? -modifierValue : modifierValue
+
+  if (
+    !Number.isInteger(diceCount) ||
+    diceCount < 1 ||
+    diceCount > 30 ||
+    !Number.isInteger(modifier) ||
+    modifier < -99 ||
+    modifier > 99
+  ) {
+    return null
+  }
+
+  return { diceCount, modifier }
+}
+
+function isValidDiceCode(value) {
+  return Boolean(parseDiceCode(value))
+}
+
+function rollDiceCode(value) {
+  const parsedDice = parseDiceCode(value)
+
+  if (!parsedDice) {
+    return
+  }
+
+  window.dispatchEvent(
+    new CustomEvent('sw6d-roll-dice', {
+      detail: parsedDice,
+    }),
+  )
+}
 </script>
 
 <template>
@@ -194,22 +283,59 @@ const healthStates = ['Healthy', 'Stunned', 'Wounded', 'Incapacitated', 'Mortall
         <section class="sheet-panel sheet-panel-full">
           <h2 class="sheet-heading">Attributes & Skills</h2>
           <div class="mt-4 grid gap-5 sm:grid-cols-2">
-            <div v-for="attribute in sheet.attributes ?? []" :key="attribute.name" class="attribute-block">
+            <div v-for="(attribute, attributeIndex) in sheet.attributes ?? []" :key="attribute.name" class="attribute-block">
               <div class="flex items-center justify-between gap-3">
                 <label class="sheet-inline-field flex-1">
                   <span>{{ attribute.name }}</span>
-                  <input v-model="attribute.dice" />
+                  <span class="sheet-dice-input">
+                    <input v-model="attribute.dice" />
+                    <button
+                      class="sheet-roll-button"
+                      type="button"
+                      :disabled="!isValidDiceCode(attribute.dice)"
+                      :aria-label="`Roll ${attribute.name}`"
+                      @click="rollDiceCode(attribute.dice)"
+                    >
+                      R
+                    </button>
+                  </span>
                 </label>
               </div>
 
               <div class="mt-2 space-y-2">
                 <div v-for="skill in attribute.skills" :key="skill.name" class="skill-row">
                   <input v-model="skill.name" />
-                  <input v-model="skill.dice" />
+                  <span class="sheet-dice-input">
+                    <input v-model="skill.dice" />
+                    <button
+                      class="sheet-roll-button"
+                      type="button"
+                      :disabled="!isValidDiceCode(skill.dice)"
+                      :aria-label="`Roll ${skill.name}`"
+                      @click="rollDiceCode(skill.dice)"
+                    >
+                      R
+                    </button>
+                  </span>
                 </div>
-                <div v-for="slot in 3" :key="slot" class="skill-row">
-                  <input value="" />
-                  <input value="" />
+                <div
+                  v-for="(emptySkill, slot) in emptySkillRows[emptySkillKey(attribute, attributeIndex)]"
+                  :key="`empty-skill-${slot}`"
+                  class="skill-row"
+                >
+                  <input v-model="emptySkill.name" />
+                  <span class="sheet-dice-input">
+                    <input v-model="emptySkill.dice" />
+                    <button
+                      class="sheet-roll-button"
+                      type="button"
+                      :disabled="!isValidDiceCode(emptySkill.dice)"
+                      :aria-label="`Roll ${emptySkill.name || 'empty skill row'}`"
+                      @click="rollDiceCode(emptySkill.dice)"
+                    >
+                      R
+                    </button>
+                  </span>
                 </div>
               </div>
             </div>
@@ -265,7 +391,7 @@ const healthStates = ['Healthy', 'Stunned', 'Wounded', 'Incapacitated', 'Mortall
           </div>
           <div class="mt-4 space-y-2">
             <div
-              v-for="(item, index) in equipment"
+              v-for="{ index } in paginatedEquipment"
               :key="`equipment-${index}`"
               class="equipment-row"
             >
@@ -277,14 +403,46 @@ const healthStates = ['Healthy', 'Stunned', 'Wounded', 'Incapacitated', 'Mortall
               <button class="sheet-delete-button" type="button" @click="removeEquipment(index)">Delete</button>
             </div>
           </div>
+          <div v-if="equipmentPageCount > 1" class="sheet-pagination">
+            <button type="button" :disabled="equipmentPage === 1" @click="previousEquipmentPage">
+              Previous
+            </button>
+            <span>Page {{ equipmentPage }} of {{ equipmentPageCount }}</span>
+            <button
+              type="button"
+              :disabled="equipmentPage === equipmentPageCount"
+              @click="nextEquipmentPage"
+            >
+              Next
+            </button>
+          </div>
         </section>
 
         <section class="sheet-panel">
-          <h2 class="sheet-heading">Money</h2>
-          <label class="sheet-field mt-4">
-            <span>Credits</span>
-            <input v-model="sheet.credits" />
-          </label>
+          <h2 class="sheet-heading">Funds & Currency</h2>
+          <div class="currency-grid mt-4">
+            <label class="sheet-field">
+              <span>Imperial Credits</span>
+              <input v-model="sheet.credits" />
+            </label>
+            <label class="sheet-field">
+              <span>New Republic Credits</span>
+              <input v-model="sheet.newRepublicCredits" />
+            </label>
+            <label class="sheet-field">
+              <span>Peggats</span>
+              <input v-model="sheet.peggats" />
+            </label>
+            <label class="sheet-field">
+              <span>Requisition Tokens</span>
+              <input v-model="sheet.requisitionTokens" />
+            </label>
+          </div>
+          <p class="currency-note">
+            Conversions are approximate: 1 Republic credit is worth 2 to 3.5 Imperial credits,
+            1 peggat is worth 40 to 50 Imperial credits, and 1 requisition token is worth about
+            100 Imperial credits.
+          </p>
         </section>
 
         <section class="sheet-panel">

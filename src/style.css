@@ -520,6 +520,47 @@
       0 0 18px rgba(20, 151, 255, 0.34);
   }
 
+  .sheet-dice-input {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 28px;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .sheet-roll-button {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 1px solid rgba(79, 195, 255, 0.58);
+    border-radius: 999px;
+    background: rgba(79, 195, 255, 0.12);
+    color: #d9f5ff;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background 160ms ease,
+      color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .sheet-roll-button:hover:not(:disabled) {
+    border-color: #9be7ff;
+    background: rgba(79, 195, 255, 0.2);
+    box-shadow:
+      0 0 7px rgba(255, 255, 255, 0.28),
+      0 0 18px rgba(79, 195, 255, 0.58);
+    transform: translateY(-1px);
+  }
+
+  .sheet-roll-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.34;
+  }
+
   .sheet-portrait {
     aspect-ratio: 1;
     width: 100%;
@@ -537,7 +578,7 @@
   .sheet-table-head,
   .sheet-table-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 80px;
+    grid-template-columns: minmax(0, 0.92fr) minmax(112px, 0.38fr);
     gap: 8px;
     align-items: center;
   }
@@ -572,6 +613,59 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) 84px;
     gap: 8px;
+  }
+
+  .currency-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .currency-note {
+    margin-top: 14px;
+    color: rgba(217, 245, 255, 0.48);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .sheet-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    color: rgba(217, 245, 255, 0.68);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .sheet-pagination button {
+    border: 1px solid rgba(79, 195, 255, 0.42);
+    background: rgba(79, 195, 255, 0.08);
+    padding: 8px 10px;
+    color: #d9f5ff;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    text-transform: uppercase;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background 160ms ease;
+  }
+
+  .sheet-pagination button:hover:not(:disabled) {
+    border-color: #9be7ff;
+    background: rgba(79, 195, 255, 0.16);
+    box-shadow: 0 0 16px rgba(79, 195, 255, 0.38);
+  }
+
+  .sheet-pagination button:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
   }
 
   .sheet-export-button {
@@ -755,6 +849,35 @@
     color: #ffd7d2;
     font-weight: 900;
     line-height: 1;
+  }
+
+  .dice-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dice-sound-button {
+    border: 1px solid rgba(79, 195, 255, 0.42);
+    background: rgba(79, 195, 255, 0.08);
+    padding: 8px 10px;
+    color: #d9f5ff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background 160ms ease;
+  }
+
+  .dice-sound-button:hover {
+    border-color: #9be7ff;
+    background: rgba(79, 195, 255, 0.16);
+    box-shadow: 0 0 16px rgba(79, 195, 255, 0.38);
   }
 
   .dice-form {
@@ -2161,6 +2284,7 @@ input[type='reset'] {
   .sheet-table-head,
   .sheet-table-row,
   .sheet-table-row-with-action,
+  .currency-grid,
   .equipment-row,
   .combatant-row {
     grid-template-columns: minmax(0, 1fr);
