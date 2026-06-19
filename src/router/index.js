@@ -11,6 +11,7 @@ import MapView from '../views/MapView.vue'
 import PlaceholderView from '../views/PlaceholderView.vue'
 import PlanetsView from '../views/PlanetsView.vue'
 import PlayerCharacterView from '../views/PlayerCharacterView.vue'
+import RollLogView from '../views/RollLogView.vue'
 import RulesView from '../views/RulesView.vue'
 import ToolsView from '../views/ToolsView.vue'
 
@@ -101,6 +102,11 @@ const router = createRouter({
       path: '/log/:logSlug',
       name: 'game-log-entry',
       component: GameLogEntryView,
+    },
+    {
+      path: '/roll-log',
+      name: 'roll-log',
+      component: RollLogView,
     },
   ],
 })

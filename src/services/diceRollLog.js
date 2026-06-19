@@ -15,6 +15,20 @@ const supabase =
 
 export const isDiceRollLoggingConfigured = Boolean(supabase)
 
+export async function getLatestDiceRolls(limit = 25) {
+  if (!supabase) {
+    return { data: [], error: null }
+  }
+
+  return supabase
+    .from('dice_rolls')
+    .select(
+      'id, created_at, page, route_name, source, dice_count, modifier, subtotal, total, wild_total, wild_status, wild_breakdown, dice_breakdown',
+    )
+    .order('created_at', { ascending: false })
+    .limit(limit)
+}
+
 export async function logDiceRoll(roll) {
   if (!supabase) {
     return
@@ -36,5 +50,28 @@ export async function logDiceRoll(roll) {
 
   if (error) {
     console.warn('Dice roll log failed:', error.message)
+  }
+}
+
+export function subscribeToDiceRolls(onInsert) {
+  if (!supabase) {
+    return null
+  }
+
+  const channel = supabase
+    .channel('dice-roll-log')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'dice_rolls',
+      },
+      (payload) => onInsert(payload.new),
+    )
+    .subscribe()
+
+  return () => {
+    supabase.removeChannel(channel)
   }
 }

@@ -17,7 +17,7 @@ create table if not exists public.dice_rolls (
 alter table public.dice_rolls enable row level security;
 
 revoke all on table public.dice_rolls from anon, authenticated;
-grant insert on table public.dice_rolls to anon, authenticated;
+grant insert, select on table public.dice_rolls to anon, authenticated;
 
 drop policy if exists "Allow public dice roll inserts" on public.dice_rolls;
 drop policy if exists "Allow anonymous dice roll inserts" on public.dice_rolls;
@@ -26,3 +26,23 @@ on public.dice_rolls
 for insert
 to anon, authenticated
 with check (true);
+
+drop policy if exists "Allow public dice roll reads" on public.dice_rolls;
+create policy "Allow public dice roll reads"
+on public.dice_rolls
+for select
+to anon, authenticated
+using (true);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'dice_rolls'
+  ) then
+    alter publication supabase_realtime add table public.dice_rolls;
+  end if;
+end $$;
