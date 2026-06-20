@@ -16,6 +16,9 @@ dist-ssr
 !.env.example
 .codex-remote-attachments/
 
+# Local database setup with campaign codes
+supabase/*.sql
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

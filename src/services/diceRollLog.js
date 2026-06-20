@@ -22,9 +22,7 @@ export async function getLatestDiceRolls(limit = 25) {
 
   return supabase
     .from('dice_rolls')
-    .select(
-      'id, created_at, page, route_name, source, dice_count, modifier, subtotal, total, wild_total, wild_status, wild_breakdown, dice_breakdown',
-    )
+    .select('id, created_at, source_code, dice_count, modifier, subtotal, total, wild_total, wild_status_code')
     .order('created_at', { ascending: false })
     .limit(limit)
 }
@@ -35,17 +33,14 @@ export async function logDiceRoll(roll) {
   }
 
   const { error } = await supabase.from('dice_rolls').insert({
-    page: roll.page,
-    route_name: roll.routeName || null,
-    source: roll.source,
+    campaign_code: roll.campaignCode,
+    source_code: roll.sourceCode,
     dice_count: roll.diceCount,
     modifier: roll.modifier,
     subtotal: roll.subtotal,
     total: roll.total,
     wild_total: roll.wildTotal,
-    wild_status: roll.wildStatus,
-    wild_breakdown: roll.wildBreakdown,
-    dice_breakdown: roll.diceBreakdown,
+    wild_status_code: roll.wildStatusCode,
   })
 
   if (error) {

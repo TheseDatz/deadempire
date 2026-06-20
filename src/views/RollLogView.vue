@@ -38,8 +38,20 @@ function formatModifier(value) {
   return value >= 0 ? `+${value}` : `${value}`
 }
 
-function formatDiceBreakdown(values) {
-  return Array.isArray(values) && values.length ? values.join(', ') : 'None'
+function formatSource(value) {
+  return value === 1 ? 'sheet' : 'manual'
+}
+
+function formatWildStatus(value) {
+  if (value === 1) {
+    return 'critical'
+  }
+
+  if (value === 2) {
+    return 'exploded'
+  }
+
+  return 'normal'
 }
 
 function addRoll(roll) {
@@ -105,16 +117,14 @@ onUnmounted(() => {
               <h2>{{ roll.total }}</h2>
             </div>
             <div class="roll-log-badges">
-              <span>{{ roll.source }}</span>
-              <span :class="`roll-log-wild-${roll.wild_status}`">{{ roll.wild_status }}</span>
+              <span>{{ formatSource(roll.source_code) }}</span>
+              <span :class="`roll-log-wild-${formatWildStatus(roll.wild_status_code)}`">
+                {{ formatWildStatus(roll.wild_status_code) }}
+              </span>
             </div>
           </div>
 
           <dl class="roll-log-details">
-            <div>
-              <dt>Page</dt>
-              <dd>{{ roll.page }}</dd>
-            </div>
             <div>
               <dt>Dice</dt>
               <dd>{{ roll.dice_count }}D {{ formatModifier(roll.modifier) }}</dd>
@@ -125,11 +135,7 @@ onUnmounted(() => {
             </div>
             <div>
               <dt>Wild</dt>
-              <dd>{{ formatDiceBreakdown(roll.wild_breakdown) }}</dd>
-            </div>
-            <div class="roll-log-detail-wide">
-              <dt>Breakdown</dt>
-              <dd>{{ formatDiceBreakdown(roll.dice_breakdown) }}</dd>
+              <dd>{{ roll.wild_total }}</dd>
             </div>
           </dl>
         </article>

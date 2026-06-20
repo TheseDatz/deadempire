@@ -12,7 +12,8 @@ const breakdown = ref([])
 const wildBreakdown = ref([])
 const errorMessage = ref('')
 const isMuted = ref(false)
-const isLoggingEnabled = ref(localStorage.getItem('sw6d-log-dice-rolls') === 'true')
+const isLoggingEnabled = ref(false)
+const campaignCode = ref(null)
 
 const shouldShow = computed(() => route.path !== '/')
 const total = computed(() => {
@@ -61,27 +62,37 @@ function playDiceSound() {
 }
 
 function setLoggingEnabled(value) {
+  if (!value) {
+    isLoggingEnabled.value = false
+    campaignCode.value = null
+    return
+  }
+
+  const enteredCode = window.prompt('Enter roll logging code')
+
+  if (!/^\d+$/.test(enteredCode || '')) {
+    window.alert('Roll logging code must contain digits only.')
+    return
+  }
+
+  campaignCode.value = Number(enteredCode)
   isLoggingEnabled.value = value
-  localStorage.setItem('sw6d-log-dice-rolls', `${value}`)
 }
 
 function captureRoll(source, dice, mod) {
-  if (!isLoggingEnabled.value || !result.value) {
+  if (!isLoggingEnabled.value || !campaignCode.value || !result.value) {
     return
   }
 
   logDiceRoll({
-    page: route.fullPath,
-    routeName: route.name,
-    source,
+    campaignCode: campaignCode.value,
+    sourceCode: source === 'sheet' ? 1 : 0,
     diceCount: dice,
     modifier: mod,
     subtotal: result.value.subtotal,
     total: result.value.total,
     wildTotal: result.value.wildTotal,
-    wildStatus: result.value.wildStatus,
-    wildBreakdown: [...wildBreakdown.value],
-    diceBreakdown: [...breakdown.value],
+    wildStatusCode: result.value.wildStatus === 'critical' ? 1 : result.value.wildStatus === 'exploded' ? 2 : 0,
   })
 }
 

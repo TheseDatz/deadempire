@@ -370,7 +370,8 @@
   .planets-page,
   .factions-page,
   .rules-page,
-  .game-log-page {
+  .game-log-page,
+  .roll-log-page {
     background:
       radial-gradient(circle at 14% 22%, rgba(155, 231, 255, 0.1), transparent 28%),
       radial-gradient(circle at 78% 12%, rgba(79, 195, 255, 0.08), transparent 26%),
