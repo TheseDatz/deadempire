@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import AdminView from '../views/AdminView.vue'
 import HomeView from '../views/HomeView.vue'
 import AboutView from '../views/AboutView.vue'
 import BestiaryView from '../views/BestiaryView.vue'
@@ -12,8 +13,12 @@ import PlaceholderView from '../views/PlaceholderView.vue'
 import PlanetsView from '../views/PlanetsView.vue'
 import PlayerCharacterView from '../views/PlayerCharacterView.vue'
 import RollLogView from '../views/RollLogView.vue'
+import ProfileView from '../views/ProfileView.vue'
+import ForbiddenView from '../views/ForbiddenView.vue'
+import NotFoundView from '../views/NotFoundView.vue'
 import RulesView from '../views/RulesView.vue'
 import ToolsView from '../views/ToolsView.vue'
+import { getSession, isAdminSession } from '../services/auth'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -107,8 +112,51 @@ const router = createRouter({
       path: '/roll-log',
       name: 'roll-log',
       component: RollLogView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: ProfileView,
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: AdminView,
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/403',
+      name: 'forbidden',
+      component: ForbiddenView,
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView,
     },
   ],
+})
+
+router.beforeEach(async (to) => {
+  if (!to.meta.requiresAuth && !to.meta.requiresAdmin) {
+    return true
+  }
+
+  const { session } = await getSession()
+
+  if (session) {
+    if (to.meta.requiresAdmin && !isAdminSession(session)) {
+      return { name: 'forbidden' }
+    }
+
+    return true
+  }
+
+  return {
+    name: 'profile',
+    query: { redirect: to.fullPath },
+  }
 })
 
 export default router

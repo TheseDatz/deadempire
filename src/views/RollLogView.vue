@@ -38,8 +38,20 @@ function formatModifier(value) {
   return value >= 0 ? `+${value}` : `${value}`
 }
 
-function formatDiceBreakdown(values) {
-  return Array.isArray(values) && values.length ? values.join(', ') : 'None'
+function formatSource(value) {
+  return value === 1 ? 'sheet' : 'manual'
+}
+
+function formatWildStatus(value) {
+  if (value === 1) {
+    return 'critical'
+  }
+
+  if (value === 2) {
+    return 'exploded'
+  }
+
+  return 'normal'
 }
 
 function addRoll(roll) {
@@ -100,38 +112,36 @@ onUnmounted(() => {
       <section v-else class="roll-log-list mt-8">
         <article v-for="roll in rolls" :key="roll.id" class="roll-log-card">
           <div class="roll-log-card-main">
-            <div>
-              <time :datetime="roll.created_at">{{ formatDate(roll.created_at) }}</time>
-              <h2>{{ roll.total }}</h2>
+            <div class="roll-log-result-block">
+              <div class="roll-log-meta">
+                <time :datetime="roll.created_at">{{ formatDate(roll.created_at) }}</time>
+                <span>{{ roll.roller_username }}</span>
+              </div>
+              <h2 :class="`roll-log-total-${formatWildStatus(roll.wild_status_code)}`">{{ roll.total }}</h2>
             </div>
+
+            <dl class="roll-log-details">
+              <div>
+                <dt>Dice</dt>
+                <dd>{{ roll.dice_count }}D {{ formatModifier(roll.modifier) }}</dd>
+              </div>
+              <div>
+                <dt>Subtotal</dt>
+                <dd>{{ roll.subtotal }}</dd>
+              </div>
+              <div>
+                <dt>Wild</dt>
+                <dd>{{ roll.wild_total }}</dd>
+              </div>
+            </dl>
+
             <div class="roll-log-badges">
-              <span>{{ roll.source }}</span>
-              <span :class="`roll-log-wild-${roll.wild_status}`">{{ roll.wild_status }}</span>
+              <span>{{ formatSource(roll.source_code) }}</span>
+              <span :class="`roll-log-wild-${formatWildStatus(roll.wild_status_code)}`">
+                {{ formatWildStatus(roll.wild_status_code) }}
+              </span>
             </div>
           </div>
-
-          <dl class="roll-log-details">
-            <div>
-              <dt>Page</dt>
-              <dd>{{ roll.page }}</dd>
-            </div>
-            <div>
-              <dt>Dice</dt>
-              <dd>{{ roll.dice_count }}D {{ formatModifier(roll.modifier) }}</dd>
-            </div>
-            <div>
-              <dt>Subtotal</dt>
-              <dd>{{ roll.subtotal }}</dd>
-            </div>
-            <div>
-              <dt>Wild</dt>
-              <dd>{{ formatDiceBreakdown(roll.wild_breakdown) }}</dd>
-            </div>
-            <div class="roll-log-detail-wide">
-              <dt>Breakdown</dt>
-              <dd>{{ formatDiceBreakdown(roll.dice_breakdown) }}</dd>
-            </div>
-          </dl>
         </article>
       </section>
     </section>
