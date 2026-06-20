@@ -1,19 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
+import { isSupabaseConfigured, supabase } from './supabaseClient'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-const supabase =
-  SUPABASE_URL && SUPABASE_ANON_KEY
-    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      })
-    : null
-
-export const isDiceRollLoggingConfigured = Boolean(supabase)
+export const isDiceRollLoggingConfigured = isSupabaseConfigured
 
 export async function getLatestDiceRolls(limit = 25) {
   if (!supabase) {

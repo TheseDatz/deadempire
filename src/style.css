@@ -371,7 +371,10 @@
   .factions-page,
   .rules-page,
   .game-log-page,
-  .roll-log-page {
+  .roll-log-page,
+  .profile-page,
+  .admin-page,
+  .error-page {
     background:
       radial-gradient(circle at 14% 22%, rgba(155, 231, 255, 0.1), transparent 28%),
       radial-gradient(circle at 78% 12%, rgba(79, 195, 255, 0.08), transparent 26%),
@@ -1947,6 +1950,142 @@
     color: #f8fdff;
     font-weight: 800;
     line-height: 1.45;
+  }
+
+  .profile-panel {
+    border: 1px solid rgba(79, 195, 255, 0.3);
+    background: rgba(9, 16, 24, 0.68);
+    padding: 24px;
+    box-shadow:
+      inset 0 0 26px rgba(79, 195, 255, 0.04),
+      0 10px 28px rgba(0, 0, 0, 0.22);
+  }
+
+  .profile-panel h2 {
+    margin-top: 4px;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: #f8fdff;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-kicker,
+  .profile-form span {
+    color: rgba(217, 245, 255, 0.72);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .profile-form {
+    display: grid;
+    gap: 16px;
+  }
+
+  .profile-form label {
+    display: grid;
+    gap: 7px;
+  }
+
+  .profile-form input {
+    width: 100%;
+    border: 1px solid rgba(79, 195, 255, 0.32);
+    background: rgba(3, 7, 12, 0.58);
+    padding: 11px 12px;
+    color: #f8fdff;
+    font: inherit;
+    outline: none;
+  }
+
+  .profile-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .profile-button {
+    border: 1px solid rgba(79, 195, 255, 0.72);
+    background: linear-gradient(180deg, rgba(79, 195, 255, 0.22), rgba(20, 151, 255, 0.12));
+    padding: 12px 18px;
+    color: #f8fdff;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+
+  .profile-button-secondary {
+    border-color: rgba(79, 195, 255, 0.42);
+    background: rgba(79, 195, 255, 0.08);
+  }
+
+  .profile-button:hover:not(:disabled) {
+    border-color: #9be7ff;
+    box-shadow: 0 0 18px rgba(79, 195, 255, 0.42);
+    transform: translateY(-1px);
+  }
+
+  .profile-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .profile-message {
+    border: 1px solid rgba(79, 195, 255, 0.28);
+    background: rgba(79, 195, 255, 0.08);
+    padding: 12px;
+    color: rgba(217, 245, 255, 0.84);
+    font-weight: 800;
+    line-height: 1.45;
+  }
+
+  .profile-message-error {
+    border-color: rgba(255, 59, 36, 0.52);
+    background: rgba(255, 59, 36, 0.1);
+    color: #ffd7d2;
+  }
+
+  .error-page {
+    display: grid;
+    place-items: center;
+    text-align: center;
+  }
+
+  .error-page-inner {
+    display: grid;
+    place-items: center;
+    gap: 16px;
+  }
+
+  .error-page h1 {
+    color: #ffd7d2;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(7rem, 22vw, 18rem);
+    font-weight: 900;
+    line-height: 0.82;
+    text-shadow:
+      0 0 7px #fff,
+      0 0 16px #ff3b24,
+      0 0 34px #e01613,
+      0 0 66px #a80000;
+  }
+
+  .error-page p {
+    color: #fff2a7;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.35rem, 3vw, 2.6rem);
+    font-weight: 900;
+    line-height: 1.2;
+    text-shadow:
+      0 0 6px rgba(255, 255, 255, 0.86),
+      0 0 14px rgba(255, 242, 167, 0.9),
+      0 0 32px rgba(255, 196, 64, 0.72);
   }
 
   .rules-intro {
