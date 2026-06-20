@@ -24,13 +24,21 @@ export function onAuthStateChange(callback) {
   return () => data.subscription.unsubscribe()
 }
 
-export async function signInWithEmail(email, password) {
+function usernameToEmail(username) {
+  return `${username.trim().toLowerCase()}@dead-empire.local`
+}
+
+export async function signInWithUsername(username, password) {
   if (!supabase) {
     return { error: new Error('Supabase is not configured.') }
   }
 
+  if (!/^[a-z0-9_-]+$/i.test(username.trim())) {
+    return { error: new Error('Use only letters, numbers, underscores, or hyphens for username.') }
+  }
+
   const { error } = await supabase.auth.signInWithPassword({
-    email,
+    email: usernameToEmail(username),
     password,
   })
 

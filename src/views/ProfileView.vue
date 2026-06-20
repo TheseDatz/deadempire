@@ -5,13 +5,13 @@ import {
   getSession,
   isSupabaseConfigured,
   onAuthStateChange,
-  signInWithEmail,
+  signInWithUsername,
   signOut,
 } from '../services/auth'
 
 const route = useRoute()
 const router = useRouter()
-const email = ref('')
+const username = ref('')
 const password = ref('')
 const session = ref(null)
 const isLoading = ref(true)
@@ -21,9 +21,10 @@ const errorMessage = ref('')
 let unsubscribe = null
 
 const userEmail = computed(() => session.value?.user?.email || '')
+const displayName = computed(() => userEmail.value.replace(/@dead-empire\.local$/, ''))
 const redirectPath = computed(() => {
   const redirect = route.query.redirect
-  return typeof redirect === 'string' && redirect.startsWith('/') ? redirect : ''
+  return typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : ''
 })
 
 function clearFeedback() {
@@ -35,7 +36,7 @@ async function handleSignIn() {
   clearFeedback()
   isSubmitting.value = true
 
-  const { error } = await signInWithEmail(email.value.trim(), password.value)
+  const { error } = await signInWithUsername(username.value, password.value)
 
   if (error) {
     errorMessage.value = error.message
@@ -102,7 +103,7 @@ onUnmounted(() => {
 
         <template v-else-if="session">
           <p class="profile-kicker">Signed in as</p>
-          <h2>{{ userEmail }}</h2>
+          <h2>{{ displayName }}</h2>
           <p class="mt-3 text-cyan-100/80">You can now use authenticated campaign features as they are added.</p>
 
           <button class="profile-button mt-6" type="button" :disabled="isSubmitting" @click="handleSignOut">
@@ -120,8 +121,15 @@ onUnmounted(() => {
           </p>
 
           <label>
-            <span>Email</span>
-            <input v-model="email" type="email" autocomplete="email" required />
+            <span>Username</span>
+            <input
+              v-model="username"
+              type="text"
+              autocomplete="username"
+              pattern="[A-Za-z0-9_-]+"
+              title="Use only letters, numbers, underscores, or hyphens."
+              required
+            />
           </label>
 
           <label>

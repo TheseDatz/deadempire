@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { isDiceRollLoggingConfigured, logDiceRoll } from '../services/diceRollLog'
+import { logDiceRoll } from '../services/diceRollLog'
 
 const route = useRoute()
 const isOpen = ref(false)
@@ -12,8 +12,6 @@ const breakdown = ref([])
 const wildBreakdown = ref([])
 const errorMessage = ref('')
 const isMuted = ref(false)
-const isLoggingEnabled = ref(false)
-const campaignCode = ref(null)
 
 const shouldShow = computed(() => route.path !== '/')
 const total = computed(() => {
@@ -61,31 +59,12 @@ function playDiceSound() {
   window.setTimeout(() => audioContext.close(), 800)
 }
 
-function setLoggingEnabled(value) {
-  if (!value) {
-    isLoggingEnabled.value = false
-    campaignCode.value = null
-    return
-  }
-
-  const enteredCode = window.prompt('Enter roll logging code')
-
-  if (!/^\d+$/.test(enteredCode || '')) {
-    window.alert('Roll logging code must contain digits only.')
-    return
-  }
-
-  campaignCode.value = Number(enteredCode)
-  isLoggingEnabled.value = value
-}
-
 function captureRoll(source, dice, mod) {
-  if (!isLoggingEnabled.value || !campaignCode.value || !result.value) {
+  if (!result.value) {
     return
   }
 
   logDiceRoll({
-    campaignCode: campaignCode.value,
     sourceCode: source === 'sheet' ? 1 : 0,
     diceCount: dice,
     modifier: mod,
@@ -201,15 +180,6 @@ onUnmounted(() => {
               @click="isMuted = !isMuted"
             >
               {{ isMuted ? 'Sound Off' : 'Sound On' }}
-            </button>
-            <button
-              class="dice-sound-button"
-              type="button"
-              :disabled="!isDiceRollLoggingConfigured"
-              :aria-label="isLoggingEnabled ? 'Disable dice roll logging' : 'Enable dice roll logging'"
-              @click="setLoggingEnabled(!isLoggingEnabled)"
-            >
-              Log {{ isLoggingEnabled ? 'On' : 'Off' }}
             </button>
             <button class="dice-close-button" type="button" aria-label="Close dice roller" @click="isOpen = false">
               X

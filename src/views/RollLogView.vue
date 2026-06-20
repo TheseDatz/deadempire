@@ -112,10 +112,29 @@ onUnmounted(() => {
       <section v-else class="roll-log-list mt-8">
         <article v-for="roll in rolls" :key="roll.id" class="roll-log-card">
           <div class="roll-log-card-main">
-            <div>
-              <time :datetime="roll.created_at">{{ formatDate(roll.created_at) }}</time>
-              <h2>{{ roll.total }}</h2>
+            <div class="roll-log-result-block">
+              <div class="roll-log-meta">
+                <time :datetime="roll.created_at">{{ formatDate(roll.created_at) }}</time>
+                <span>{{ roll.roller_username }}</span>
+              </div>
+              <h2 :class="`roll-log-total-${formatWildStatus(roll.wild_status_code)}`">{{ roll.total }}</h2>
             </div>
+
+            <dl class="roll-log-details">
+              <div>
+                <dt>Dice</dt>
+                <dd>{{ roll.dice_count }}D {{ formatModifier(roll.modifier) }}</dd>
+              </div>
+              <div>
+                <dt>Subtotal</dt>
+                <dd>{{ roll.subtotal }}</dd>
+              </div>
+              <div>
+                <dt>Wild</dt>
+                <dd>{{ roll.wild_total }}</dd>
+              </div>
+            </dl>
+
             <div class="roll-log-badges">
               <span>{{ formatSource(roll.source_code) }}</span>
               <span :class="`roll-log-wild-${formatWildStatus(roll.wild_status_code)}`">
@@ -123,21 +142,6 @@ onUnmounted(() => {
               </span>
             </div>
           </div>
-
-          <dl class="roll-log-details">
-            <div>
-              <dt>Dice</dt>
-              <dd>{{ roll.dice_count }}D {{ formatModifier(roll.modifier) }}</dd>
-            </div>
-            <div>
-              <dt>Subtotal</dt>
-              <dd>{{ roll.subtotal }}</dd>
-            </div>
-            <div>
-              <dt>Wild</dt>
-              <dd>{{ roll.wild_total }}</dd>
-            </div>
-          </dl>
         </article>
       </section>
     </section>

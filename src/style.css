@@ -1867,10 +1867,22 @@
   }
 
   .roll-log-card-main {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(132px, 0.42fr) minmax(320px, 1fr) auto;
+    gap: 16px;
     align-items: start;
-    justify-content: space-between;
-    gap: 18px;
+  }
+
+  .roll-log-result-block {
+    display: grid;
+    gap: 7px;
+  }
+
+  .roll-log-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
   }
 
   .roll-log-card time {
@@ -1881,13 +1893,36 @@
     text-transform: uppercase;
   }
 
+  .roll-log-meta span {
+    color: #f8fdff;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   .roll-log-card h2 {
-    margin-top: 5px;
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: 42px;
+    font-size: 52px;
     font-weight: 900;
     color: #f8fdff;
     line-height: 1;
+  }
+
+  .roll-log-card h2.roll-log-total-critical {
+    color: #ff6b5f;
+    text-shadow:
+      0 0 7px rgba(255, 255, 255, 0.4),
+      0 0 16px rgba(255, 59, 36, 0.84),
+      0 0 34px rgba(224, 22, 19, 0.56);
+  }
+
+  .roll-log-card h2.roll-log-total-exploded {
+    color: #74ffb6;
+    text-shadow:
+      0 0 7px rgba(255, 255, 255, 0.34),
+      0 0 16px rgba(80, 255, 164, 0.76),
+      0 0 34px rgba(26, 211, 107, 0.52);
   }
 
   .roll-log-badges {
@@ -1920,9 +1955,8 @@
 
   .roll-log-details {
     display: grid;
-    grid-template-columns: 1.3fr 0.55fr 0.45fr 0.8fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
-    margin-top: 16px;
   }
 
   .roll-log-details div {
@@ -2562,6 +2596,8 @@ input[type='reset'] {
   .bestiary-tools,
   .bestiary-grid,
   .game-log-tools,
+  .roll-log-card-main,
+  .roll-log-details,
   .planet-grid,
   .planet-detail-grid,
   .faction-grid,

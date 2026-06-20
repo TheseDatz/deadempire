@@ -24,18 +24,21 @@ Create accounts manually instead of allowing public signup.
 
 1. Go to `Authentication` > `Users`.
 2. Click `Add user` or `Invite user`.
-3. Use the player's email address.
+3. Use the player's generated campaign email address.
+   - Example: username `jace` becomes `jace@dead-empire.local`
 4. Set or generate a temporary password.
-5. Give that email/password to the player privately.
+5. Give that username/password to the player privately.
 6. Ask the player to sign in at `/profile`.
 
 If you want players to change their temporary password later, add that feature to the profile page before sharing long-term credentials.
 
-## Roll Log Privacy
+## Roll Logging And Privacy
 
-The app redirects unauthenticated `/roll-log` visitors to `/profile`, but Supabase RLS should also protect the table from direct API reads.
+The app redirects unauthenticated `/roll-log` visitors to `/profile`, and dice rolls are only logged when a Supabase user is signed in.
 
-Run this in the SQL editor after the `dice_rolls` table exists:
+The local `supabase/dice_rolls.sql` file is intentionally ignored by Git because it may contain setup details. Run that file locally in the Supabase SQL editor after changing the table shape.
+
+For authenticated roll-log reads, use:
 
 ```sql
 revoke select on table public.dice_rolls from anon;
@@ -43,6 +46,7 @@ revoke select on table public.dice_rolls from anon;
 grant select (
   id,
   created_at,
+  roller_username,
   source_code,
   dice_count,
   modifier,
@@ -61,9 +65,33 @@ to authenticated
 using (true);
 ```
 
-Keep the insert policy as-is if you still want the campaign code to control roll submissions.
+Roll inserts should be authenticated-only:
 
-## Username-Only Login Later
+```sql
+revoke insert on table public.dice_rolls from anon;
+grant insert on table public.dice_rolls to authenticated;
+
+drop policy if exists "Allow public dice roll inserts" on public.dice_rolls;
+drop policy if exists "Allow authenticated dice roll inserts" on public.dice_rolls;
+create policy "Allow authenticated dice roll inserts"
+on public.dice_rolls
+for insert
+to authenticated
+with check (
+  roller_id = auth.uid()
+  and roller_username = left(
+    regexp_replace(
+      lower(regexp_replace(auth.jwt() ->> 'email', '@dead-empire\.local$', '')),
+      '[^a-z0-9_-]',
+      '_',
+      'g'
+    ),
+    32
+  )
+);
+```
+
+## Username-Only Login
 
 Supabase Auth is email-oriented by default. A true username-only login is possible, but it needs an extra mapping layer because `signInWithPassword` expects an email/password credential.
 
@@ -87,14 +115,14 @@ Dashboard setup:
 4. Disable email confirmation, because these are not real inboxes.
 5. Keep public signup disabled.
 
-App change needed:
+App behavior:
 
-1. Replace the email field on `/profile` with a username field.
-2. Convert the username to an email internally:
+1. `/profile` shows a username field.
+2. The app converts the username to an email internally:
    - `username.trim().toLowerCase() + '@dead-empire.local'`
-3. Call Supabase sign-in with that generated email and the password.
+3. The app calls Supabase sign-in with that generated email and the password.
 
-Difficulty: low. This is the fastest path and probably good enough for a private tabletop group.
+This is now the active login approach for the site.
 
 ### Stronger Option: Username Mapping Table
 
