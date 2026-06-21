@@ -20,6 +20,7 @@ const sheet = ref({})
 const weapons = ref([])
 const armor = ref([])
 const equipment = ref([])
+const forcePowers = ref([])
 const equipmentPage = ref(1)
 const emptySkillRows = ref({})
 const health = ref('Healthy')
@@ -32,6 +33,9 @@ const saveErrorMessage = ref('')
 
 const character = computed(() => {
   return allCharacters.value.find((entry) => entry.id === props.characterName) ?? null
+})
+const isForceSensitive = computed(() => {
+  return String(sheet.value.force?.forceSensitive ?? '').trim().toLowerCase() === 'yes'
 })
 
 onMounted(async () => {
@@ -84,6 +88,7 @@ watch(
     weapons.value = (nextCharacter.weapons ?? []).map((weapon) => ({ ...weapon }))
     armor.value = (nextCharacter.armor ?? []).map((armorItem) => ({ ...armorItem }))
     equipment.value = [...(nextCharacter.equipment ?? [])]
+    forcePowers.value = (nextCharacter.forcePowers ?? []).map((power) => ({ ...power }))
     equipmentPage.value = 1
     emptySkillRows.value = Object.fromEntries(
       (nextSheet.attributes ?? []).map((attribute, index) => [
@@ -155,6 +160,20 @@ function removeEquipment(index) {
   equipmentPage.value = Math.min(equipmentPage.value, equipmentPageCount.value)
 }
 
+function addForcePower() {
+  forcePowers.value.push({ name: '', difficulty: '', description: '' })
+}
+
+function removeForcePower(index) {
+  const powerName = forcePowers.value[index]?.name || 'this Force power'
+
+  if (!window.confirm(`Delete ${powerName}?`)) {
+    return
+  }
+
+  forcePowers.value.splice(index, 1)
+}
+
 function previousEquipmentPage() {
   equipmentPage.value = Math.max(1, equipmentPage.value - 1)
 }
@@ -168,9 +187,6 @@ function emptySkillKey(attribute, index) {
 }
 
 function buildCharacterJson() {
-  const [control = '-', sense = '-', alter = '-'] = (sheet.value.forceSummary ?? '- / - / -')
-    .split('/')
-    .map((value) => value.trim())
   const exportData = {
     ...sheet.value,
     specialAbilities: (sheet.value.specialAbilitiesText ?? '')
@@ -179,10 +195,8 @@ function buildCharacterJson() {
       .filter(Boolean),
     force: {
       ...sheet.value.force,
-      control,
-      sense,
-      alter,
     },
+    forcePowers: forcePowers.value,
     weapons: weapons.value,
     armor: armor.value,
     equipment: equipment.value,
@@ -542,7 +556,7 @@ function rollDiceCode(value) {
 
         <section class="sheet-panel">
           <h2 class="sheet-heading">The Force</h2>
-          <div class="mt-4 grid grid-cols-2 gap-3">
+          <div class="mt-4 grid grid-cols-3 gap-3">
             <label class="sheet-field">
               <span>Force Sensitive?</span>
               <input v-model="sheet.force.forceSensitive" />
@@ -555,10 +569,59 @@ function rollDiceCode(value) {
               <span>Dark Side Points</span>
               <input v-model="sheet.force.darkSidePoints" />
             </label>
+          </div>
+
+          <div class="mt-4 grid grid-cols-3 gap-3">
             <label class="sheet-field">
-              <span>Control / Sense / Alter</span>
-              <input v-model="sheet.forceSummary" />
+              <span>Control</span>
+              <span class="sheet-dice-input">
+                <input v-model="sheet.force.control" />
+                <button class="sheet-roll-button" type="button" :disabled="!isValidDiceCode(sheet.force.control)" @click="rollDiceCode(sheet.force.control)">
+                  R
+                </button>
+              </span>
             </label>
+            <label class="sheet-field">
+              <span>Sense</span>
+              <span class="sheet-dice-input">
+                <input v-model="sheet.force.sense" />
+                <button class="sheet-roll-button" type="button" :disabled="!isValidDiceCode(sheet.force.sense)" @click="rollDiceCode(sheet.force.sense)">
+                  R
+                </button>
+              </span>
+            </label>
+            <label class="sheet-field">
+              <span>Alter</span>
+              <span class="sheet-dice-input">
+                <input v-model="sheet.force.alter" />
+                <button class="sheet-roll-button" type="button" :disabled="!isValidDiceCode(sheet.force.alter)" @click="rollDiceCode(sheet.force.alter)">
+                  R
+                </button>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section v-if="isForceSensitive" class="sheet-panel sheet-panel-full">
+          <div class="sheet-section-header">
+            <h2 class="sheet-heading">Force Powers</h2>
+            <button class="sheet-add-button" type="button" @click="addForcePower">Add</button>
+          </div>
+          <p v-if="forcePowers.length === 0" class="mt-4 text-cyan-100/70">No Force powers entered yet.</p>
+          <div v-for="(power, index) in forcePowers" :key="`force-power-${index}`" class="force-power-row mt-4">
+            <label class="sheet-field">
+              <span>Name</span>
+              <input v-model="power.name" />
+            </label>
+            <label class="sheet-field">
+              <span>Difficulty</span>
+              <input v-model="power.difficulty" />
+            </label>
+            <label class="sheet-field">
+              <span>Description</span>
+              <textarea v-model="power.description" rows="3" />
+            </label>
+            <button class="sheet-delete-button" type="button" @click="removeForcePower(index)">Delete</button>
           </div>
         </section>
 

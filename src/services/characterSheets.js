@@ -49,7 +49,7 @@ function createBlankSheet(slug) {
     specialAbilities: [],
     force: {
       forceSensitive: 'No',
-      forcePoints: '0',
+      forcePoints: '1',
       darkSidePoints: '0',
       control: '-',
       sense: '-',

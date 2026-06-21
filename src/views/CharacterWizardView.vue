@@ -18,6 +18,7 @@ const isAttributesOpen = ref(false)
 const isSpecialAbilitiesOpen = ref(false)
 const isForceOpen = ref(false)
 const isSkillsOpen = ref(false)
+const isEquipmentOpen = ref(false)
 const template = reactive({
   characterName: '',
   playerName: '',
@@ -46,7 +47,12 @@ const template = reactive({
       },
     ]),
   ),
+  forcePowers: Array.from({ length: 3 }, () => ({ name: '', difficulty: '', description: '' })),
   skills: Object.fromEntries(ATTRIBUTE_NAMES.map((name) => [name, []])),
+  credits: '250',
+  weapons: [],
+  armor: [],
+  equipment: [],
 })
 
 const baseAttributePips = computed(() => diceToPips(template.attributeDice))
@@ -102,11 +108,29 @@ const forceComplete = computed(() => {
     remainingAttributePips.value >= 0 &&
     FORCE_SKILLS.every((name) => {
       const skill = template.forceSkills[name]
-      return Number(skill.dice) >= 0 && Number(skill.pips) >= 0 && Number(skill.pips) <= 2
-    })
+      return forceSkillPips(skill) >= 0 && forceSkillPips(skill) <= 3
+    }) &&
+    forcePowersComplete.value
   )
 })
 const forcePoints = computed(() => (template.forceSensitive ? 2 : 1))
+const availableForcePowerSlots = computed(() => {
+  if (!template.forceSensitive) {
+    return 0
+  }
+
+  return FORCE_SKILLS.filter((name) => forceSkillPips(template.forceSkills[name]) >= 3).length
+})
+const forcePowersComplete = computed(() => {
+  if (!template.forceSensitive) {
+    return true
+  }
+
+  return template.forcePowers.slice(0, availableForcePowerSlots.value).every((power) => {
+    const hasAnyValue = power.name.trim() || power.difficulty.trim() || power.description.trim()
+    return !hasAnyValue || (power.name.trim() && power.difficulty.trim() && power.description.trim())
+  })
+})
 const skillsComplete = computed(() => {
   const skills = ATTRIBUTE_NAMES.flatMap((name) => template.skills[name])
 
@@ -114,6 +138,13 @@ const skillsComplete = computed(() => {
     skills.length > 0 &&
     remainingSkillPips.value === 0 &&
     skills.every((skill) => skill.name.trim() && Number(skill.dice) >= 0 && Number(skill.pips) >= 0 && Number(skill.pips) <= 2)
+  )
+})
+const equipmentComplete = computed(() => {
+  return (
+    template.weapons.every((weapon) => weapon.name.trim() && weapon.range.trim() && weapon.damage.trim()) &&
+    template.armor.every((armorItem) => armorItem.name.trim() && armorItem.strengthBonus.trim() && armorItem.dexPenalty.trim()) &&
+    template.equipment.every((item) => item.trim())
   )
 })
 
@@ -143,6 +174,10 @@ function skillTotalPips(attributeName, skill) {
   return attributePips(attributeName) + diceToPips(skill.dice) + Number(skill.pips || 0)
 }
 
+function forceSkillPips(skill) {
+  return diceToPips(skill.dice) + Number(skill.pips || 0)
+}
+
 function normalizePips(attribute) {
   const pips = Number(attribute.pips || 0)
 
@@ -152,6 +187,12 @@ function normalizePips(attribute) {
   } else if (pips < 0) {
     attribute.pips = 0
   }
+}
+
+function normalizeForcePips(skill) {
+  const cappedPips = Math.min(3, Math.max(0, forceSkillPips(skill)))
+  skill.dice = Math.floor(cappedPips / 3)
+  skill.pips = cappedPips % 3
 }
 
 function addSkill(attributeName, skillName = '') {
@@ -164,6 +205,30 @@ function addSkill(attributeName, skillName = '') {
 
 function removeSkill(attributeName, index) {
   template.skills[attributeName].splice(index, 1)
+}
+
+function addWeapon() {
+  template.weapons.push({ name: '', range: '', damage: '' })
+}
+
+function removeWeapon(index) {
+  template.weapons.splice(index, 1)
+}
+
+function addArmor() {
+  template.armor.push({ name: '', strengthBonus: '', dexPenalty: '' })
+}
+
+function removeArmor(index) {
+  template.armor.splice(index, 1)
+}
+
+function addEquipment() {
+  template.equipment.push('')
+}
+
+function removeEquipment(index) {
+  template.equipment.splice(index, 1)
 }
 </script>
 
@@ -430,7 +495,14 @@ function removeSkill(attributeName, index) {
                   <legend>{{ name }}</legend>
                   <label>
                     <span>Dice</span>
-                    <input v-model.number="template.forceSkills[name].dice" type="number" min="0" step="1" />
+                    <input
+                      v-model.number="template.forceSkills[name].dice"
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="1"
+                      @change="normalizeForcePips(template.forceSkills[name])"
+                    />
                   </label>
                   <label>
                     <span>Pips</span>
@@ -440,11 +512,45 @@ function removeSkill(attributeName, index) {
                       min="0"
                       max="2"
                       step="1"
-                      @change="normalizePips(template.forceSkills[name])"
+                      @change="normalizeForcePips(template.forceSkills[name])"
                     />
                   </label>
                 </fieldset>
               </div>
+
+              <section class="wizard-force-powers" :class="{ 'wizard-disabled-section': !template.forceSensitive }">
+                <div class="wizard-skill-group-header">
+                  <div>
+                    <h2>Force Powers</h2>
+                    <p>{{ availableForcePowerSlots }} / 3 slots available</p>
+                  </div>
+                </div>
+
+                <p>
+                  Force powers are available only to Force-sensitive characters. One slot unlocks for each Control, Sense, or Alter
+                  field that has at least 1D assigned.
+                </p>
+
+                <div
+                  v-for="(power, index) in template.forcePowers"
+                  :key="`force-power-${index}`"
+                  class="wizard-force-power-row"
+                >
+                  <p class="wizard-muted">Power {{ index + 1 }}</p>
+                  <label class="wizard-field">
+                    <span>Name</span>
+                    <input v-model="power.name" type="text" :disabled="index >= availableForcePowerSlots" />
+                  </label>
+                  <label class="wizard-field">
+                    <span>Difficulty</span>
+                    <textarea v-model="power.difficulty" rows="4" :disabled="index >= availableForcePowerSlots" />
+                  </label>
+                  <label class="wizard-field">
+                    <span>Description</span>
+                    <textarea v-model="power.description" rows="4" :disabled="index >= availableForcePowerSlots" />
+                  </label>
+                </div>
+              </section>
             </section>
           </div>
         </article>
@@ -551,6 +657,120 @@ function removeSkill(attributeName, index) {
                   </div>
                 </section>
               </div>
+            </section>
+          </div>
+        </article>
+
+        <article class="wizard-accordion">
+          <button
+            class="wizard-accordion-header"
+            type="button"
+            :aria-expanded="isEquipmentOpen"
+            @click="isEquipmentOpen = !isEquipmentOpen"
+          >
+            <span>Credits & Starting Equipment</span>
+            <svg
+              class="wizard-accordion-cue"
+              :class="{ 'wizard-accordion-cue-closed': !isEquipmentOpen }"
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+            >
+              <path :d="isEquipmentOpen ? 'M6 9l6 6 6-6' : 'M6 12h12'" />
+            </svg>
+            <span
+              class="wizard-check"
+              :class="{ 'wizard-check-complete': equipmentComplete }"
+              aria-label="Section complete"
+            >
+              {{ equipmentComplete ? '✓' : '×' }}
+            </span>
+          </button>
+
+          <div v-if="isEquipmentOpen" class="wizard-accordion-body">
+            <section class="wizard-step">
+              <p>
+                Choose starting gear that fits your character's backstory and role. Starting equipment will be reviewed by the GM,
+                and may be edited if too much gear is taken or if an item is too powerful for a beginning character.
+              </p>
+              <p>
+                Rancorpit has useful reference collections for
+                <a href="https://www.rancorpit.com/forums/downloads/Rancor%20Pit%20Stat%20Compilations/Weapons_Stats.pdf" target="_blank" rel="noreferrer">weapons</a>
+                and
+                <a href="https://www.rancorpit.com/forums/downloads/Rancor%20Pit%20Stat%20Compilations/Equipment_Stats.pdf" target="_blank" rel="noreferrer">general equipment</a>.
+              </p>
+
+              <label class="wizard-field wizard-field-short">
+                <span>Credits</span>
+                <input v-model="template.credits" type="text" disabled />
+              </label>
+              <p class="wizard-muted">For this campaign all players will start with 250 credits.</p>
+
+              <section class="wizard-equipment-section">
+                <div class="wizard-skill-group-header">
+                  <h2>Weapons</h2>
+                  <button class="sheet-add-button" type="button" @click="addWeapon">Add</button>
+                </div>
+
+                <p v-if="template.weapons.length === 0" class="wizard-muted">No starting weapons selected yet.</p>
+
+                <div v-for="(weapon, index) in template.weapons" :key="`weapon-${index}`" class="wizard-equipment-row wizard-equipment-row-with-action">
+                  <label class="wizard-field">
+                    <span>Weapon</span>
+                    <input v-model="weapon.name" type="text" />
+                  </label>
+                  <label class="wizard-field">
+                    <span>Range</span>
+                    <input v-model="weapon.range" type="text" />
+                  </label>
+                  <label class="wizard-field">
+                    <span>Damage</span>
+                    <input v-model="weapon.damage" type="text" />
+                  </label>
+                  <button class="sheet-delete-button" type="button" @click="removeWeapon(index)">Delete</button>
+                </div>
+              </section>
+
+              <section class="wizard-equipment-section">
+                <div class="wizard-skill-group-header">
+                  <h2>Armor</h2>
+                  <button class="sheet-add-button" type="button" @click="addArmor">Add</button>
+                </div>
+
+                <p v-if="template.armor.length === 0" class="wizard-muted">No starting armor selected yet.</p>
+
+                <div v-for="(armorItem, index) in template.armor" :key="`armor-${index}`" class="wizard-equipment-row wizard-equipment-row-with-action">
+                  <label class="wizard-field">
+                    <span>Armor</span>
+                    <input v-model="armorItem.name" type="text" />
+                  </label>
+                  <label class="wizard-field">
+                    <span>Str Bonus</span>
+                    <input v-model="armorItem.strengthBonus" type="text" />
+                  </label>
+                  <label class="wizard-field">
+                    <span>Dex Penalty</span>
+                    <input v-model="armorItem.dexPenalty" type="text" />
+                  </label>
+                  <button class="sheet-delete-button" type="button" @click="removeArmor(index)">Delete</button>
+                </div>
+              </section>
+
+              <section class="wizard-equipment-section">
+                <div class="wizard-skill-group-header">
+                  <h2>Equipment</h2>
+                  <button class="sheet-add-button" type="button" @click="addEquipment">Add</button>
+                </div>
+
+                <p v-if="template.equipment.length === 0" class="wizard-muted">No starting equipment selected yet.</p>
+
+                <div v-for="(_item, index) in template.equipment" :key="`equipment-${index}`" class="wizard-equipment-row wizard-equipment-line-row">
+                  <label class="wizard-field">
+                    <span>Equipment</span>
+                    <input v-model="template.equipment[index]" type="text" />
+                  </label>
+                  <button class="sheet-delete-button" type="button" @click="removeEquipment(index)">Delete</button>
+                </div>
+              </section>
             </section>
           </div>
         </article>
