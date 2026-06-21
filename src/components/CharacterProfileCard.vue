@@ -9,6 +9,7 @@ const props = defineProps({
 })
 
 const characterName = computed(() => props.character.name || 'Unnamed Character')
+const characterQuote = computed(() => props.character.quote || props.character.tagline || '')
 </script>
 
 <template>
@@ -33,8 +34,8 @@ const characterName = computed(() => props.character.name || 'Unnamed Character'
         <span class="character-level">Pts. {{ character.characterPoints }}</span>
       </div>
 
-      <p class="mt-4 line-clamp-2 text-base leading-6 text-slate-300">
-        {{ character.tagline }}
+      <p v-if="characterQuote" class="character-card-quote mt-4 line-clamp-2 text-base leading-6 text-slate-300">
+        "{{ characterQuote }}"
       </p>
     </div>
   </RouterLink>

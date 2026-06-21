@@ -21,8 +21,8 @@ const weapons = ref([])
 const armor = ref([])
 const equipment = ref([])
 const forcePowers = ref([])
+const advantages = ref([])
 const equipmentPage = ref(1)
-const emptySkillRows = ref({})
 const health = ref('Healthy')
 const canSaveCharacters = ref(false)
 const canViewBackstory = ref(false)
@@ -30,6 +30,8 @@ const isSaving = ref(false)
 const isDeleting = ref(false)
 const saveMessage = ref('')
 const saveErrorMessage = ref('')
+const isCombatRolling = ref(false)
+const combatActionCount = ref(1)
 
 const character = computed(() => {
   return allCharacters.value.find((entry) => entry.id === props.characterName) ?? null
@@ -89,13 +91,8 @@ watch(
     armor.value = (nextCharacter.armor ?? []).map((armorItem) => ({ ...armorItem }))
     equipment.value = [...(nextCharacter.equipment ?? [])]
     forcePowers.value = (nextCharacter.forcePowers ?? []).map((power) => ({ ...power }))
+    advantages.value = (nextCharacter.advantages ?? []).map((item) => ({ ...item }))
     equipmentPage.value = 1
-    emptySkillRows.value = Object.fromEntries(
-      (nextSheet.attributes ?? []).map((attribute, index) => [
-        emptySkillKey(attribute, index),
-        Array.from({ length: 3 }, () => ({ name: '', dice: '' })),
-      ]),
-    )
     health.value = nextCharacter.health ?? 'Healthy'
   },
   { immediate: true },
@@ -174,6 +171,35 @@ function removeForcePower(index) {
   forcePowers.value.splice(index, 1)
 }
 
+function addAdvantage() {
+  advantages.value.push({ name: '', description: '' })
+}
+
+function removeAdvantage(index) {
+  const advantageName = advantages.value[index]?.name || 'this advantage or disadvantage'
+
+  if (!window.confirm(`Delete ${advantageName}?`)) {
+    return
+  }
+
+  advantages.value.splice(index, 1)
+}
+
+function addSkill(attribute) {
+  attribute.skills = attribute.skills ?? []
+  attribute.skills.push({ name: '', dice: '' })
+}
+
+function removeSkill(attribute, index) {
+  const skillName = attribute.skills?.[index]?.name || 'this skill'
+
+  if (!window.confirm(`Delete ${skillName}?`)) {
+    return
+  }
+
+  attribute.skills.splice(index, 1)
+}
+
 function previousEquipmentPage() {
   equipmentPage.value = Math.max(1, equipmentPage.value - 1)
 }
@@ -182,13 +208,18 @@ function nextEquipmentPage() {
   equipmentPage.value = Math.min(equipmentPageCount.value, equipmentPage.value + 1)
 }
 
-function emptySkillKey(attribute, index) {
-  return `${index}-${attribute.name}`
-}
-
 function buildCharacterJson() {
+  const attributes = (sheet.value.attributes ?? []).map((attribute) => ({
+    ...attribute,
+    skills: (attribute.skills ?? []).filter((skill) => skill.name?.trim() || skill.dice?.trim()),
+  }))
+  const quote = sheet.value.quote ?? sheet.value.tagline ?? ''
+
   const exportData = {
     ...sheet.value,
+    attributes,
+    tagline: quote,
+    quote,
     specialAbilities: (sheet.value.specialAbilitiesText ?? '')
       .split('\n')
       .map((ability) => ability.trim())
@@ -197,6 +228,7 @@ function buildCharacterJson() {
       ...sheet.value.force,
     },
     forcePowers: forcePowers.value,
+    advantages: advantages.value,
     weapons: weapons.value,
     armor: armor.value,
     equipment: equipment.value,
@@ -312,7 +344,151 @@ function isValidDiceCode(value) {
   return Boolean(parseDiceCode(value))
 }
 
-function rollDiceCode(value) {
+function isValidRoll(value) {
+  return isValidDiceCode(applyDiceAdjustments(value, [combatPenalty()]))
+}
+
+function parseDiceBonus(value) {
+  const normalized = String(value ?? '').trim()
+
+  if (!normalized) {
+    return { diceCount: 0, modifier: 0 }
+  }
+
+  const signedPipMatch = normalized.match(/^([+-])\s*(\d+)$/)
+
+  if (signedPipMatch) {
+    const sign = signedPipMatch[1] === '-' ? -1 : 1
+    return { diceCount: 0, modifier: sign * Number(signedPipMatch[2]) }
+  }
+
+  const signedDiceMatch = normalized.match(/^([+-])\s*(\d+)\s*d(?:\s*([+-])\s*(\d+))?$/i)
+
+  if (signedDiceMatch) {
+    const sign = signedDiceMatch[1] === '-' ? -1 : 1
+    const diceCount = sign * Number(signedDiceMatch[2])
+    const pipSign = signedDiceMatch[3] === '-' ? -1 : 1
+    const modifier = sign * pipSign * Number(signedDiceMatch[4] ?? 0)
+    return { diceCount, modifier }
+  }
+
+  return parseDiceCode(normalized) ?? null
+}
+
+function parseDexPenalty(value) {
+  const normalized = String(value ?? '').trim()
+
+  if (!normalized) {
+    return { diceCount: 0, modifier: 0 }
+  }
+
+  const adjustment = parseDiceBonus(normalized)
+
+  if (!adjustment) {
+    return null
+  }
+
+  if (normalized.startsWith('-')) {
+    return adjustment
+  }
+
+  return {
+    diceCount: -Math.abs(adjustment.diceCount),
+    modifier: -Math.abs(adjustment.modifier),
+  }
+}
+
+function totalArmorDexPenalty() {
+  return armor.value.reduce(
+    (total, armorItem) => {
+      const penalty = parseDexPenalty(armorItem.dexPenalty)
+
+      if (!penalty) {
+        return total
+      }
+
+      return {
+        diceCount: total.diceCount + penalty.diceCount,
+        modifier: total.modifier + penalty.modifier,
+      }
+    },
+    { diceCount: 0, modifier: 0 },
+  )
+}
+
+function dicePartsToCode(diceCount, modifier) {
+  if (diceCount < 1) {
+    return ''
+  }
+
+  if (modifier === 0) {
+    return `${diceCount}D`
+  }
+
+  return `${diceCount}D${modifier > 0 ? '+' : ''}${modifier}`
+}
+
+function combatPenalty() {
+  if (!isCombatRolling.value) {
+    return { diceCount: 0, modifier: 0 }
+  }
+
+  return {
+    diceCount: -Math.max(0, Number(combatActionCount.value || 1) - 1),
+    modifier: 0,
+  }
+}
+
+function applyDiceAdjustments(value, adjustments = []) {
+  const dice = parseDiceCode(value)
+
+  if (!dice) {
+    return ''
+  }
+
+  const adjusted = adjustments.reduce(
+    (total, adjustment) => ({
+      diceCount: total.diceCount + adjustment.diceCount,
+      modifier: total.modifier + adjustment.modifier,
+    }),
+    dice,
+  )
+
+  return dicePartsToCode(adjusted.diceCount, adjusted.modifier)
+}
+
+function dexAdjustedDiceCode(value) {
+  return applyDiceAdjustments(value, [totalArmorDexPenalty()])
+}
+
+function strengthDiceCode() {
+  const strength = (sheet.value.attributes ?? []).find((attribute) => attribute.name === 'Strength')
+  return strength?.dice ?? ''
+}
+
+function armorStrengthDiceCode(armorItem) {
+  const strength = parseDiceCode(strengthDiceCode())
+  const bonus = parseDiceBonus(armorItem.strengthBonus)
+
+  if (!strength || !bonus) {
+    return ''
+  }
+
+  const diceCount = strength.diceCount + bonus.diceCount
+  const modifier = strength.modifier + bonus.modifier
+
+  if (diceCount < 1) {
+    return ''
+  }
+
+  return dicePartsToCode(diceCount, modifier)
+}
+
+function isValidArmorStrength(armorItem) {
+  return isValidDiceCode(armorStrengthDiceCode(armorItem))
+}
+
+function rollRawDiceCode(value) {
   const parsedDice = parseDiceCode(value)
 
   if (!parsedDice) {
@@ -324,6 +500,44 @@ function rollDiceCode(value) {
       detail: parsedDice,
     }),
   )
+}
+
+function rollDiceCode(value) {
+  rollRawDiceCode(applyDiceAdjustments(value, [combatPenalty()]))
+}
+
+function rollArmorStrength(armorItem) {
+  rollRawDiceCode(armorStrengthDiceCode(armorItem))
+}
+
+function rollAttributeDice(attribute) {
+  rollDiceCode(attribute.name === 'Dexterity' ? dexAdjustedDiceCode(attribute.dice) : attribute.dice)
+}
+
+function rollSkillDice(attribute, skill) {
+  rollDiceCode(attribute.name === 'Dexterity' ? dexAdjustedDiceCode(skill.dice) : skill.dice)
+}
+
+function isValidAttributeRoll(attribute) {
+  const diceCode = attribute.name === 'Dexterity' ? dexAdjustedDiceCode(attribute.dice) : attribute.dice
+  return isValidDiceCode(applyDiceAdjustments(diceCode, [combatPenalty()]))
+}
+
+function isValidSkillRoll(attribute, skill) {
+  const diceCode = attribute.name === 'Dexterity' ? dexAdjustedDiceCode(skill.dice) : skill.dice
+  return isValidDiceCode(applyDiceAdjustments(diceCode, [combatPenalty()]))
+}
+
+function normalizeCombatActionCount() {
+  combatActionCount.value = Math.max(1, Math.floor(Number(combatActionCount.value || 1)))
+}
+
+function decreaseCombatActions() {
+  combatActionCount.value = Math.max(1, Number(combatActionCount.value || 1) - 1)
+}
+
+function increaseCombatActions() {
+  combatActionCount.value = Number(combatActionCount.value || 1) + 1
 }
 </script>
 
@@ -382,20 +596,43 @@ function rollDiceCode(value) {
         </aside>
 
         <section class="sheet-panel sheet-panel-full">
-          <h2 class="sheet-heading">Attributes & Skills</h2>
+          <div class="sheet-heading-row">
+            <h2 class="sheet-heading">Attributes & Skills</h2>
+            <div class="combat-roll-controls">
+              <label class="combat-roll-toggle">
+                <input v-model="isCombatRolling" type="checkbox" />
+                <span>Combat</span>
+              </label>
+              <label v-if="isCombatRolling" class="combat-action-control">
+                <span>Number of Actions</span>
+                <button type="button" @click="decreaseCombatActions">-</button>
+                <input
+                  v-model.number="combatActionCount"
+                  type="number"
+                  min="1"
+                  step="1"
+                  @change="normalizeCombatActionCount"
+                />
+                <button type="button" @click="increaseCombatActions">+</button>
+              </label>
+            </div>
+          </div>
           <div class="mt-4 grid gap-5 sm:grid-cols-2">
-            <div v-for="(attribute, attributeIndex) in sheet.attributes ?? []" :key="attribute.name" class="attribute-block">
+            <div v-for="attribute in sheet.attributes ?? []" :key="attribute.name" class="attribute-block">
               <div class="flex items-center justify-between gap-3">
                 <label class="sheet-inline-field flex-1">
-                  <span>{{ attribute.name }}</span>
+                  <span class="sheet-attribute-name">
+                    {{ attribute.name }}
+                    <button class="sheet-icon-add-button" type="button" :aria-label="`Add ${attribute.name} skill`" @click.prevent="addSkill(attribute)">+</button>
+                  </span>
                   <span class="sheet-dice-input">
                     <input v-model="attribute.dice" />
                     <button
                       class="sheet-roll-button"
                       type="button"
-                      :disabled="!isValidDiceCode(attribute.dice)"
+                      :disabled="!isValidAttributeRoll(attribute)"
                       :aria-label="`Roll ${attribute.name}`"
-                      @click="rollDiceCode(attribute.dice)"
+                      @click="rollAttributeDice(attribute)"
                     >
                       R
                     </button>
@@ -404,35 +641,21 @@ function rollDiceCode(value) {
               </div>
 
               <div class="mt-2 space-y-2">
-                <div v-for="skill in attribute.skills" :key="skill.name" class="skill-row">
+                <div
+                  v-for="(skill, skillIndex) in attribute.skills ?? []"
+                  :key="`${attribute.name}-skill-${skillIndex}`"
+                  class="skill-row skill-row-with-action"
+                >
+                  <button class="sheet-icon-delete-button" type="button" :aria-label="`Delete ${skill.name || 'skill'}`" @click="removeSkill(attribute, skillIndex)">-</button>
                   <input v-model="skill.name" />
                   <span class="sheet-dice-input">
                     <input v-model="skill.dice" />
                     <button
                       class="sheet-roll-button"
                       type="button"
-                      :disabled="!isValidDiceCode(skill.dice)"
+                      :disabled="!isValidSkillRoll(attribute, skill)"
                       :aria-label="`Roll ${skill.name}`"
-                      @click="rollDiceCode(skill.dice)"
-                    >
-                      R
-                    </button>
-                  </span>
-                </div>
-                <div
-                  v-for="(emptySkill, slot) in emptySkillRows[emptySkillKey(attribute, attributeIndex)]"
-                  :key="`empty-skill-${slot}`"
-                  class="skill-row"
-                >
-                  <input v-model="emptySkill.name" />
-                  <span class="sheet-dice-input">
-                    <input v-model="emptySkill.dice" />
-                    <button
-                      class="sheet-roll-button"
-                      type="button"
-                      :disabled="!isValidDiceCode(emptySkill.dice)"
-                      :aria-label="`Roll ${emptySkill.name || 'empty skill row'}`"
-                      @click="rollDiceCode(emptySkill.dice)"
+                      @click="rollSkillDice(attribute, skill)"
                     >
                       R
                     </button>
@@ -450,16 +673,27 @@ function rollDiceCode(value) {
           </div>
           <div class="sheet-table mt-4">
             <div class="sheet-table-head sheet-table-head-with-action">
+              <span aria-hidden="true"></span>
               <span>Weapon</span>
               <span>Range</span>
               <span>Damage</span>
-              <span aria-hidden="true"></span>
             </div>
             <div v-for="(weapon, index) in weapons" :key="`weapon-${index}`" class="sheet-table-row sheet-table-row-with-action">
+              <button class="sheet-icon-delete-button" type="button" :aria-label="`Delete ${weapon.name || 'weapon'}`" @click="removeWeapon(index)">-</button>
               <input v-model="weapon.name" aria-label="Weapon name" />
               <input v-model="weapon.range" aria-label="Weapon range" />
-              <input v-model="weapon.damage" aria-label="Weapon damage" />
-              <button class="sheet-delete-button" type="button" @click="removeWeapon(index)">Delete</button>
+              <span class="sheet-dice-input">
+                <input v-model="weapon.damage" aria-label="Weapon damage" />
+                <button
+                  class="sheet-roll-button"
+                  type="button"
+                  :disabled="!isValidDiceCode(weapon.damage)"
+                  :aria-label="`Roll ${weapon.name || 'weapon'} damage`"
+                  @click="rollRawDiceCode(weapon.damage)"
+                >
+                  R
+                </button>
+              </span>
             </div>
           </div>
         </section>
@@ -471,16 +705,27 @@ function rollDiceCode(value) {
           </div>
           <div class="sheet-table mt-4">
             <div class="sheet-table-head sheet-table-head-with-action">
+              <span aria-hidden="true"></span>
               <span>Armor</span>
               <span>Str Bonus</span>
               <span>Dex Penalty</span>
-              <span aria-hidden="true"></span>
             </div>
             <div v-for="(armorItem, index) in armor" :key="`armor-${index}`" class="sheet-table-row sheet-table-row-with-action">
+              <button class="sheet-icon-delete-button" type="button" :aria-label="`Delete ${armorItem.name || 'armor'}`" @click="removeArmor(index)">-</button>
               <input v-model="armorItem.name" aria-label="Armor name" />
-              <input v-model="armorItem.strengthBonus" aria-label="Armor strength bonus" />
+              <span class="sheet-dice-input">
+                <input v-model="armorItem.strengthBonus" aria-label="Armor strength bonus" />
+                <button
+                  class="sheet-roll-button"
+                  type="button"
+                  :disabled="!isValidArmorStrength(armorItem)"
+                  :aria-label="`Roll ${armorItem.name || 'armor'} strength total`"
+                  @click="rollArmorStrength(armorItem)"
+                >
+                  R
+                </button>
+              </span>
               <input v-model="armorItem.dexPenalty" aria-label="Armor dexterity penalty" />
-              <button class="sheet-delete-button" type="button" @click="removeArmor(index)">Delete</button>
             </div>
           </div>
         </section>
@@ -496,12 +741,12 @@ function rollDiceCode(value) {
               :key="`equipment-${index}`"
               class="equipment-row"
             >
+              <button class="sheet-icon-delete-button" type="button" :aria-label="`Delete ${equipment[index] || 'equipment item'}`" @click="removeEquipment(index)">-</button>
               <input
                 v-model="equipment[index]"
                 class="sheet-line-input"
                 aria-label="Equipment item"
               />
-              <button class="sheet-delete-button" type="button" @click="removeEquipment(index)">Delete</button>
             </div>
           </div>
           <div v-if="equipmentPageCount > 1" class="sheet-pagination">
@@ -550,7 +795,7 @@ function rollDiceCode(value) {
           <h2 class="sheet-heading">Special Abilities</h2>
           <textarea
             v-model="sheet.specialAbilitiesText"
-            class="mt-4 min-h-28"
+            class="mt-4 min-h-36"
           />
         </section>
 
@@ -576,7 +821,7 @@ function rollDiceCode(value) {
               <span>Control</span>
               <span class="sheet-dice-input">
                 <input v-model="sheet.force.control" />
-                <button class="sheet-roll-button" type="button" :disabled="!isValidDiceCode(sheet.force.control)" @click="rollDiceCode(sheet.force.control)">
+                <button class="sheet-roll-button" type="button" :disabled="!isValidRoll(sheet.force.control)" @click="rollDiceCode(sheet.force.control)">
                   R
                 </button>
               </span>
@@ -585,7 +830,7 @@ function rollDiceCode(value) {
               <span>Sense</span>
               <span class="sheet-dice-input">
                 <input v-model="sheet.force.sense" />
-                <button class="sheet-roll-button" type="button" :disabled="!isValidDiceCode(sheet.force.sense)" @click="rollDiceCode(sheet.force.sense)">
+                <button class="sheet-roll-button" type="button" :disabled="!isValidRoll(sheet.force.sense)" @click="rollDiceCode(sheet.force.sense)">
                   R
                 </button>
               </span>
@@ -594,7 +839,7 @@ function rollDiceCode(value) {
               <span>Alter</span>
               <span class="sheet-dice-input">
                 <input v-model="sheet.force.alter" />
-                <button class="sheet-roll-button" type="button" :disabled="!isValidDiceCode(sheet.force.alter)" @click="rollDiceCode(sheet.force.alter)">
+                <button class="sheet-roll-button" type="button" :disabled="!isValidRoll(sheet.force.alter)" @click="rollDiceCode(sheet.force.alter)">
                   R
                 </button>
               </span>
@@ -610,7 +855,10 @@ function rollDiceCode(value) {
           <p v-if="forcePowers.length === 0" class="mt-4 text-cyan-100/70">No Force powers entered yet.</p>
           <div v-for="(power, index) in forcePowers" :key="`force-power-${index}`" class="force-power-row mt-4">
             <label class="sheet-field">
-              <span>Name</span>
+              <span class="sheet-field-label-with-action">
+                Name
+                <button class="sheet-icon-delete-button" type="button" :aria-label="`Delete ${power.name || 'Force power'}`" @click.prevent="removeForcePower(index)">-</button>
+              </span>
               <input v-model="power.name" />
             </label>
             <label class="sheet-field">
@@ -621,7 +869,33 @@ function rollDiceCode(value) {
               <span>Description</span>
               <textarea v-model="power.description" rows="3" />
             </label>
-            <button class="sheet-delete-button" type="button" @click="removeForcePower(index)">Delete</button>
+          </div>
+        </section>
+
+        <section class="sheet-panel sheet-panel-full">
+          <div class="sheet-section-header">
+            <h2 class="sheet-heading">Advantages &amp; Disadvantages</h2>
+            <button class="sheet-add-button" type="button" @click="addAdvantage">Add</button>
+          </div>
+          <p v-if="advantages.length === 0" class="mt-4 text-cyan-100/70">
+            No advantages or disadvantages entered yet.
+          </p>
+          <div
+            v-for="(item, index) in advantages"
+            :key="`advantage-${index}`"
+            class="advantage-row mt-4"
+          >
+            <label class="sheet-field">
+              <span class="sheet-field-label-with-action">
+                Name
+                <button class="sheet-icon-delete-button" type="button" :aria-label="`Delete ${item.name || 'advantage or disadvantage'}`" @click.prevent="removeAdvantage(index)">-</button>
+              </span>
+              <input v-model="item.name" />
+            </label>
+            <label class="sheet-field">
+              <span>Description</span>
+              <input v-model="item.description" />
+            </label>
           </div>
         </section>
 

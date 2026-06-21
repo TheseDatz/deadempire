@@ -1,5 +1,12 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { getSession } from '../services/auth'
+import {
+  MAX_PLAYER_CHARACTER_SHEETS,
+  getOwnedCharacterSheetCount,
+  saveCharacterSheet,
+} from '../services/characterSheets'
 
 const ATTRIBUTE_NAMES = ['Dexterity', 'Knowledge', 'Mechanical', 'Perception', 'Strength', 'Technical']
 const FORCE_SKILLS = ['Control', 'Sense', 'Alter']
@@ -15,10 +22,12 @@ const SUGGESTED_SKILLS = {
 
 const isBasicInfoOpen = ref(true)
 const isAttributesOpen = ref(false)
+const isAdvantagesOpen = ref(false)
 const isSpecialAbilitiesOpen = ref(false)
 const isForceOpen = ref(false)
 const isSkillsOpen = ref(false)
 const isEquipmentOpen = ref(false)
+const isAdditionalInfoOpen = ref(false)
 const template = reactive({
   characterName: '',
   playerName: '',
@@ -48,20 +57,43 @@ const template = reactive({
     ]),
   ),
   forcePowers: Array.from({ length: 3 }, () => ({ name: '', difficulty: '', description: '' })),
+  advantages: [],
   skills: Object.fromEntries(ATTRIBUTE_NAMES.map((name) => [name, []])),
   credits: '250',
   weapons: [],
   armor: [],
   equipment: [],
+  homeworld: '',
+  gender: '',
+  age: '',
+  height: '',
+  weight: '',
+  appearance: '',
+  personality: '',
+  quote: '',
+  illustration: '',
+  backstory: '',
 })
 
+const router = useRouter()
+const isSubmitting = ref(false)
+const submitMessage = ref('')
+const submitErrorMessage = ref('')
+
 const baseAttributePips = computed(() => diceToPips(template.attributeDice))
-const totalAttributePips = computed(() => baseAttributePips.value + diceToPips(6))
+const advantageModifierPips = computed(() => {
+  return template.advantages.reduce((total, item) => total + diceToPips(item.diceModifier), 0)
+})
+const totalAttributePips = computed(() => baseAttributePips.value + diceToPips(6) + advantageModifierPips.value)
 const assignedAttributePips = computed(() => {
   const attributePips = ATTRIBUTE_NAMES.reduce((total, name) => {
     const attribute = template.attributes[name]
     return total + diceToPips(attribute.dice) + Number(attribute.pips || 0)
   }, 0)
+
+  if (!template.forceSensitive) {
+    return attributePips
+  }
 
   return FORCE_SKILLS.reduce((total, name) => {
     const skill = template.forceSkills[name]
@@ -99,6 +131,11 @@ const attributesComplete = computed(() => {
       return Number(attribute.dice) > 0 && Number(attribute.pips) >= 0 && Number(attribute.pips) <= 2
     })
   )
+})
+const advantagesComplete = computed(() => {
+  return template.advantages.every((item) => {
+    return item.name.trim() && item.diceModifier !== '' && !Number.isNaN(Number(item.diceModifier))
+  })
 })
 const specialAbilitiesComplete = computed(() => {
   return template.hasNoSpecialAbilities || Boolean(template.specialAbilities.trim())
@@ -147,6 +184,19 @@ const equipmentComplete = computed(() => {
     template.equipment.every((item) => item.trim())
   )
 })
+const additionalInfoComplete = computed(() => true)
+const allSectionsComplete = computed(() => {
+  return (
+    basicInfoComplete.value &&
+    attributesComplete.value &&
+    advantagesComplete.value &&
+    specialAbilitiesComplete.value &&
+    forceComplete.value &&
+    skillsComplete.value &&
+    equipmentComplete.value &&
+    additionalInfoComplete.value
+  )
+})
 
 function diceToPips(dice) {
   return Number(dice || 0) * 3
@@ -163,6 +213,20 @@ function formatPips(pips) {
   }
 
   return `${sign}${dice}D+${pipRemainder}`
+}
+
+function formatDiceModifier(dice) {
+  const modifier = Number(dice || 0)
+
+  if (modifier > 0) {
+    return `+${modifier}D`
+  }
+
+  return `${modifier}D`
+}
+
+function movementValue(value) {
+  return String(value || '').split('/')[0].trim()
 }
 
 function attributePips(attributeName) {
@@ -207,6 +271,14 @@ function removeSkill(attributeName, index) {
   template.skills[attributeName].splice(index, 1)
 }
 
+function addAdvantage() {
+  template.advantages.push({ name: '', diceModifier: 0 })
+}
+
+function removeAdvantage(index) {
+  template.advantages.splice(index, 1)
+}
+
 function addWeapon() {
   template.weapons.push({ name: '', range: '', damage: '' })
 }
@@ -229,6 +301,161 @@ function addEquipment() {
 
 function removeEquipment(index) {
   template.equipment.splice(index, 1)
+}
+
+function isValidImageLink(value) {
+  if (!value.trim()) {
+    return true
+  }
+
+  try {
+    const url = new URL(value)
+    return ['http:', 'https:'].includes(url.protocol)
+  } catch (_error) {
+    return false
+  }
+}
+
+function buildCharacterSheet(slug) {
+  return {
+    id: slug,
+    name: template.characterName.trim(),
+    playerName: template.playerName.trim(),
+    tagline: template.quote.trim(),
+    type: template.type.trim(),
+    species: template.species.trim(),
+    homeworld: template.homeworld.trim(),
+    gender: template.gender.trim(),
+    age: template.age.trim(),
+    height: template.height.trim(),
+    weight: template.weight.trim(),
+    move: movementValue(template.move),
+    characterPoints: '0',
+    photo: template.illustration.trim(),
+    appearance: template.appearance.trim(),
+    personality: template.personality.trim(),
+    quote: template.quote.trim(),
+    attributes: ATTRIBUTE_NAMES.map((name) => ({
+      name,
+      dice: formatPips(attributePips(name)),
+      skills: template.skills[name]
+        .filter((skill) => skill.name.trim())
+        .map((skill) => ({
+          name: skill.name.trim(),
+          dice: formatPips(skillTotalPips(name, skill)),
+        })),
+    })),
+    weapons: template.weapons.map((weapon) => ({
+      name: weapon.name.trim(),
+      range: weapon.range.trim(),
+      damage: weapon.damage.trim(),
+    })),
+    armor: template.armor.map((armorItem) => ({
+      name: armorItem.name.trim(),
+      strengthBonus: armorItem.strengthBonus.trim(),
+      dexPenalty: armorItem.dexPenalty.trim(),
+    })),
+    equipment: template.equipment.map((item) => item.trim()).filter(Boolean),
+    advantages: template.advantages
+      .filter((item) => item.name.trim())
+      .map((item) => ({
+        name: item.name.trim(),
+        description: `Dice modifier: ${formatDiceModifier(item.diceModifier)}`,
+        diceModifier: Number(item.diceModifier || 0),
+      })),
+    health: 'Healthy',
+    credits: template.credits,
+    newRepublicCredits: '0',
+    peggats: '0',
+    requisitionTokens: '0',
+    specialAbilities: template.hasNoSpecialAbilities
+      ? []
+      : template.specialAbilities
+          .split('\n')
+          .map((ability) => ability.trim())
+          .filter(Boolean),
+    force: {
+      forceSensitive: template.forceSensitive ? 'Yes' : 'No',
+      forcePoints: String(forcePoints.value),
+      darkSidePoints: '0',
+      control: template.forceSensitive ? formatPips(forceSkillPips(template.forceSkills.Control)) : '-',
+      sense: template.forceSensitive ? formatPips(forceSkillPips(template.forceSkills.Sense)) : '-',
+      alter: template.forceSensitive ? formatPips(forceSkillPips(template.forceSkills.Alter)) : '-',
+    },
+    forcePowers: template.forceSensitive
+      ? template.forcePowers
+          .slice(0, availableForcePowerSlots.value)
+          .filter((power) => power.name.trim() || power.difficulty.trim() || power.description.trim())
+          .map((power) => ({
+            name: power.name.trim(),
+            difficulty: power.difficulty.trim(),
+            description: power.description.trim(),
+          }))
+      : [],
+    background: template.backstory.trim(),
+  }
+}
+
+async function submitCharacter() {
+  submitMessage.value = ''
+  submitErrorMessage.value = ''
+
+  if (!window.confirm('Submit this character and create a new character sheet?')) {
+    return
+  }
+
+  if (!allSectionsComplete.value) {
+    submitErrorMessage.value = 'Please complete every required section before submitting.'
+    return
+  }
+
+  if (!isValidImageLink(template.illustration)) {
+    submitErrorMessage.value = 'Character illustration must be a valid image URL.'
+    return
+  }
+
+  isSubmitting.value = true
+
+  const { session, error: sessionError } = await getSession()
+
+  if (sessionError) {
+    submitErrorMessage.value = sessionError.message
+    isSubmitting.value = false
+    return
+  }
+
+  if (!session) {
+    submitErrorMessage.value = 'Sign in before submitting a character.'
+    isSubmitting.value = false
+    return
+  }
+
+  const { count, error: countError } = await getOwnedCharacterSheetCount()
+
+  if (countError) {
+    submitErrorMessage.value = countError.message
+    isSubmitting.value = false
+    return
+  }
+
+  if (count >= MAX_PLAYER_CHARACTER_SHEETS) {
+    submitErrorMessage.value = `Each account can have up to ${MAX_PLAYER_CHARACTER_SHEETS} character sheets.`
+    isSubmitting.value = false
+    return
+  }
+
+  const slug = crypto.randomUUID()
+  const { character, error } = await saveCharacterSheet(buildCharacterSheet(slug), slug, 'player')
+
+  if (error) {
+    submitErrorMessage.value = error.message
+    isSubmitting.value = false
+    return
+  }
+
+  submitMessage.value = 'Character submitted.'
+  isSubmitting.value = false
+  router.push(`/playercharacter/${character?._slug || slug}`)
 }
 </script>
 
@@ -311,6 +538,7 @@ function removeEquipment(index) {
           </div>
         </article>
 
+
         <article class="wizard-accordion">
           <button
             class="wizard-accordion-header"
@@ -389,6 +617,73 @@ function removeEquipment(index) {
                 <span>Move</span>
                 <input v-model="template.move" type="text" />
               </label>
+            </section>
+          </div>
+        </article>
+        <article class="wizard-accordion">
+          <button
+            class="wizard-accordion-header"
+            type="button"
+            :aria-expanded="isAdvantagesOpen"
+            @click="isAdvantagesOpen = !isAdvantagesOpen"
+          >
+            <span>Advantages &amp; Disadvantages</span>
+            <svg
+              class="wizard-accordion-cue"
+              :class="{ 'wizard-accordion-cue-closed': !isAdvantagesOpen }"
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+            >
+              <path :d="isAdvantagesOpen ? 'M6 9l6 6 6-6' : 'M6 12h12'" />
+            </svg>
+            <span
+              class="wizard-check"
+              :class="{ 'wizard-check-complete': advantagesComplete }"
+              aria-label="Section complete"
+            >
+              {{ advantagesComplete ? '\u2713' : '\u00d7' }}
+            </span>
+          </button>
+
+          <div v-if="isAdvantagesOpen" class="wizard-accordion-body">
+            <section class="wizard-step">
+              <p>
+                This section is optional. Advantages and disadvantages can be found on page 30 of the rulebook.
+              </p>
+
+              <p>
+                Advantages and disadvantages can adjust how many attribute dice your character has available. Use a positive dice
+                modifier when the trait gives extra attribute dice, and a negative modifier when it spends or removes them.
+              </p>
+
+              <div class="wizard-attribute-meter" :class="{ 'wizard-attribute-over': remainingAttributePips < 0 }">
+                Modifier {{ formatPips(advantageModifierPips) }}; total attribute dice now {{ formatPips(totalAttributePips) }}
+              </div>
+
+              <div class="wizard-skill-group-header">
+                <h2>Traits</h2>
+                <button class="sheet-add-button" type="button" @click="addAdvantage">Add</button>
+              </div>
+
+              <p v-if="template.advantages.length === 0" class="wizard-muted">
+                No advantages or disadvantages selected yet.
+              </p>
+
+              <div
+                v-for="(item, index) in template.advantages"
+                :key="`advantage-${index}`"
+                class="wizard-advantage-row"
+              >
+                <label class="wizard-field">
+                  <span>Name</span>
+                  <input v-model="item.name" type="text" />
+                </label>
+                <label class="wizard-field">
+                  <span>Dice Modifier</span>
+                  <input v-model.number="item.diceModifier" type="number" step="1" />
+                </label>
+                <button class="sheet-delete-button" type="button" @click="removeAdvantage(index)">Delete</button>
+              </div>
             </section>
           </div>
         </article>
@@ -479,18 +774,18 @@ function removeEquipment(index) {
 
               <p class="wizard-total">Force Points: {{ forcePoints }}</p>
 
-              <p>
+              <p v-if="template.forceSensitive">
                 If you want to begin with Force training, assign dice to Control, Sense, and Alter below. These dice spend from the
                 same total pool as your attributes.
               </p>
 
-              <div class="wizard-attribute-meter" :class="{ 'wizard-attribute-over': remainingAttributePips < 0 }">
+              <div v-if="template.forceSensitive" class="wizard-attribute-meter" :class="{ 'wizard-attribute-over': remainingAttributePips < 0 }">
                 Assigned {{ formatPips(assignedAttributePips) }} / {{ formatPips(totalAttributePips) }}
                 <span v-if="remainingAttributePips >= 0">({{ formatPips(remainingAttributePips) }} remaining)</span>
                 <span v-else>({{ formatPips(remainingAttributePips) }} over)</span>
               </div>
 
-              <div class="wizard-attribute-grid">
+              <div v-if="template.forceSensitive" class="wizard-attribute-grid">
                 <fieldset v-for="name in FORCE_SKILLS" :key="name" class="wizard-attribute-field">
                   <legend>{{ name }}</legend>
                   <label>
@@ -518,7 +813,7 @@ function removeEquipment(index) {
                 </fieldset>
               </div>
 
-              <section class="wizard-force-powers" :class="{ 'wizard-disabled-section': !template.forceSensitive }">
+              <section v-if="template.forceSensitive" class="wizard-force-powers">
                 <div class="wizard-skill-group-header">
                   <div>
                     <h2>Force Powers</h2>
@@ -528,7 +823,8 @@ function removeEquipment(index) {
 
                 <p>
                   Force powers are available only to Force-sensitive characters. One slot unlocks for each Control, Sense, or Alter
-                  field that has at least 1D assigned.
+                  field that has at least 1D assigned. You can also reference the
+                  <a href="https://www.rancorpit.com/forums/downloads/Rancor%20Pit%20Stat%20Compilations/Force_Powers.pdf" target="_blank" rel="noreferrer">Rancor Pit Force powers collection</a>.
                 </p>
 
                 <div
@@ -774,7 +1070,113 @@ function removeEquipment(index) {
             </section>
           </div>
         </article>
+
+        <article class="wizard-accordion">
+          <button
+            class="wizard-accordion-header"
+            type="button"
+            :aria-expanded="isAdditionalInfoOpen"
+            @click="isAdditionalInfoOpen = !isAdditionalInfoOpen"
+          >
+            <span>Additional Info</span>
+            <svg
+              class="wizard-accordion-cue"
+              :class="{ 'wizard-accordion-cue-closed': !isAdditionalInfoOpen }"
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+            >
+              <path :d="isAdditionalInfoOpen ? 'M6 9l6 6 6-6' : 'M6 12h12'" />
+            </svg>
+            <span
+              class="wizard-check wizard-check-complete"
+              aria-label="Optional section"
+            >
+              {{ additionalInfoComplete ? '\u2713' : '\u00d7' }}
+            </span>
+          </button>
+
+          <div v-if="isAdditionalInfoOpen" class="wizard-accordion-body">
+            <section class="wizard-step">
+              <p>
+                These details are optional, but they help round out who your character is before play begins.
+              </p>
+
+              <div class="wizard-two-column">
+                <label class="wizard-field">
+                  <span>Homeworld</span>
+                  <input v-model="template.homeworld" type="text" />
+                </label>
+                <label class="wizard-field">
+                  <span>Gender</span>
+                  <input v-model="template.gender" type="text" />
+                </label>
+                <label class="wizard-field">
+                  <span>Age</span>
+                  <input v-model="template.age" type="text" />
+                </label>
+                <label class="wizard-field">
+                  <span>Height</span>
+                  <input v-model="template.height" type="text" />
+                </label>
+                <label class="wizard-field">
+                  <span>Weight</span>
+                  <input v-model="template.weight" type="text" />
+                </label>
+              </div>
+
+              <label class="wizard-field">
+                <span>Appearance</span>
+                <textarea v-model="template.appearance" rows="5" />
+              </label>
+
+              <label class="wizard-field">
+                <span>Personality</span>
+                <textarea v-model="template.personality" rows="5" />
+              </label>
+
+              <label class="wizard-field">
+                <span>Quote</span>
+                <input v-model="template.quote" type="text" />
+              </label>
+              <p class="wizard-muted">
+                A small saying that represents your character, such as "never tell me the odds" or anything really.
+              </p>
+
+              <label class="wizard-field">
+                <span>Character Illustration</span>
+                <input v-model="template.illustration" type="url" placeholder="https://example.com/character-image.jpg" />
+              </label>
+              <p class="wizard-muted">
+                This needs to be a link directly to an image, not a gallery page or search result.
+              </p>
+
+              <label class="wizard-field">
+                <span>Backstory</span>
+                <textarea v-model="template.backstory" rows="8" />
+              </label>
+              <p class="wizard-muted">
+                Your backstory can only be seen by you and the GM, so it is okay to keep character secrets in there.
+              </p>
+            </section>
+          </div>
+        </article>
       </section>
+
+      <div class="mt-10 flex flex-wrap justify-center gap-3">
+        <button
+          class="sheet-export-button"
+          type="button"
+          :disabled="isSubmitting"
+          @click="submitCharacter"
+        >
+          {{ isSubmitting ? 'Submitting...' : 'Submit Character' }}
+        </button>
+      </div>
+
+      <p v-if="submitMessage" class="profile-message mx-auto mt-5 max-w-2xl text-center">{{ submitMessage }}</p>
+      <p v-if="submitErrorMessage" class="profile-message profile-message-error mx-auto mt-5 max-w-2xl text-center">
+        {{ submitErrorMessage }}
+      </p>
     </section>
   </main>
 </template>

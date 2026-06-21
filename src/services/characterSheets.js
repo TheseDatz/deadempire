@@ -41,6 +41,7 @@ function createBlankSheet(slug) {
     weapons: [],
     armor: [],
     equipment: [],
+    advantages: [],
     health: 'Healthy',
     credits: '0',
     newRepublicCredits: '0',
@@ -55,6 +56,7 @@ function createBlankSheet(slug) {
       sense: '-',
       alter: '-',
     },
+    forcePowers: [],
     background: '',
   }
 }
