@@ -7,21 +7,28 @@ import {
   onAuthStateChange,
   signInWithUsername,
   signOut,
+  updatePassword,
 } from '../services/auth'
 
 const route = useRoute()
 const router = useRouter()
 const username = ref('')
 const password = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
 const session = ref(null)
 const isLoading = ref(true)
 const isSubmitting = ref(false)
+const isUpdatingPassword = ref(false)
 const message = ref('')
 const errorMessage = ref('')
 let unsubscribe = null
 
 const userEmail = computed(() => session.value?.user?.email || '')
 const displayName = computed(() => userEmail.value.replace(/@dead-empire\.local$/, ''))
+const needsInitialPasswordChange = computed(() => {
+  return Boolean(session.value && !session.value.user?.user_metadata?.password_changed_at)
+})
 const redirectPath = computed(() => {
   const redirect = route.query.redirect
   return typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : ''
@@ -36,20 +43,51 @@ async function handleSignIn() {
   clearFeedback()
   isSubmitting.value = true
 
-  const { error } = await signInWithUsername(username.value, password.value)
+  const { session: signedInSession, error } = await signInWithUsername(username.value, password.value)
 
   if (error) {
     errorMessage.value = error.message
   } else {
+    const hasChangedPassword = Boolean(signedInSession?.user?.user_metadata?.password_changed_at)
     message.value = 'Signed in.'
     password.value = ''
+
+    if (redirectPath.value && hasChangedPassword) {
+      router.replace(redirectPath.value)
+    }
+  }
+
+  isSubmitting.value = false
+}
+
+async function handlePasswordChange() {
+  clearFeedback()
+
+  if (newPassword.value !== confirmPassword.value) {
+    errorMessage.value = 'New passwords do not match.'
+    return
+  }
+
+  isUpdatingPassword.value = true
+
+  const { error } = await updatePassword(newPassword.value)
+
+  if (error) {
+    errorMessage.value = error.message
+  } else {
+    message.value = 'Password updated.'
+    newPassword.value = ''
+    confirmPassword.value = ''
+
+    const { session: activeSession } = await getSession()
+    session.value = activeSession
 
     if (redirectPath.value) {
       router.replace(redirectPath.value)
     }
   }
 
-  isSubmitting.value = false
+  isUpdatingPassword.value = false
 }
 
 async function handleSignOut() {
@@ -105,6 +143,28 @@ onUnmounted(() => {
           <p class="profile-kicker">Signed in as</p>
           <h2>{{ displayName }}</h2>
           <p class="mt-3 text-cyan-100/80">You can now use authenticated campaign features as they are added.</p>
+
+          <form v-if="needsInitialPasswordChange" class="profile-form profile-password-form mt-6" @submit.prevent="handlePasswordChange">
+            <p class="profile-message">
+              This looks like your first time signing in. You can replace the temporary password from the GM now.
+            </p>
+
+            <label>
+              <span>New Password</span>
+              <input v-model="newPassword" type="password" autocomplete="new-password" minlength="6" required />
+            </label>
+
+            <label>
+              <span>Confirm New Password</span>
+              <input v-model="confirmPassword" type="password" autocomplete="new-password" minlength="6" required />
+            </label>
+
+            <div class="profile-actions">
+              <button class="profile-button" type="submit" :disabled="isUpdatingPassword">
+                Update Password
+              </button>
+            </div>
+          </form>
 
           <button class="profile-button mt-6" type="button" :disabled="isSubmitting" @click="handleSignOut">
             Sign Out

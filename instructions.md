@@ -30,7 +30,7 @@ Create accounts manually instead of allowing public signup.
 5. Give that username/password to the player privately.
 6. Ask the player to sign in at `/profile`.
 
-If you want players to change their temporary password later, add that feature to the profile page before sharing long-term credentials.
+The profile page now offers a password-change form after sign-in when the user's metadata does not include `password_changed_at`. After the player changes their password, the app stores that timestamp in Supabase Auth user metadata and stops showing the first-login prompt.
 
 ## Roll Logging And Privacy
 
@@ -90,6 +90,25 @@ with check (
   )
 );
 ```
+
+## Character Sheet Storage
+
+Character sheets are stored in Supabase in `public.character_sheets` with the full sheet body in a `jsonb` column named `sheet`.
+
+Setup:
+
+1. Run `supabase/character_sheets.sql` in the Supabase SQL editor.
+2. Sign in as an admin user.
+3. Open `/admin`.
+4. Import existing character JSON files.
+
+Backup:
+
+1. Open `/admin`.
+2. Click `Download Backup`.
+3. Keep the downloaded JSON somewhere safe before large edits.
+
+The import accepts a single character JSON object, an array of character JSON objects, or a backup object with a `character_sheets` array. Public site visitors can read active character sheets. Only users with admin app metadata can insert, update, or delete rows.
 
 ## Username-Only Login
 

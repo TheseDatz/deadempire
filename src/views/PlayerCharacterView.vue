@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { loadAllCharacters } from '../data/characters'
+import { getSession, isAdminSession } from '../services/auth'
+import { saveCharacterSheet } from '../services/characterSheets'
 
 const props = defineProps({
   characterName: {
@@ -19,6 +21,10 @@ const equipment = ref([])
 const equipmentPage = ref(1)
 const emptySkillRows = ref({})
 const health = ref('Healthy')
+const canSaveCharacters = ref(false)
+const isSaving = ref(false)
+const saveMessage = ref('')
+const saveErrorMessage = ref('')
 
 const character = computed(() => {
   return allCharacters.value.find((entry) => entry.id === props.characterName) ?? null
@@ -26,7 +32,8 @@ const character = computed(() => {
 
 onMounted(async () => {
   try {
-    const data = await loadAllCharacters()
+    const [{ session }, data] = await Promise.all([getSession(), loadAllCharacters()])
+    canSaveCharacters.value = isAdminSession(session)
     allCharacters.value = data.allCharacters
 
     if (!character.value) {
@@ -148,7 +155,7 @@ function emptySkillKey(attribute, index) {
   return `${index}-${attribute.name}`
 }
 
-function exportCharacterJson() {
+function buildCharacterJson() {
   const [control = '-', sense = '-', alter = '-'] = (sheet.value.forceSummary ?? '- / - / -')
     .split('/')
     .map((value) => value.trim())
@@ -175,6 +182,12 @@ function exportCharacterJson() {
   }
   delete exportData.forceSummary
   delete exportData.specialAbilitiesText
+  delete exportData._category
+  return exportData
+}
+
+function exportCharacterJson() {
+  const exportData = buildCharacterJson()
   const json = JSON.stringify(exportData, null, 2)
   const blob = new Blob([json], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
@@ -183,6 +196,22 @@ function exportCharacterJson() {
   link.download = `${sheet.value.id ?? 'character'}.json`
   link.click()
   URL.revokeObjectURL(url)
+}
+
+async function saveCharacterToSupabase() {
+  saveMessage.value = ''
+  saveErrorMessage.value = ''
+  isSaving.value = true
+
+  const { error } = await saveCharacterSheet(buildCharacterJson(), sheet.value._category || 'player')
+
+  if (error) {
+    saveErrorMessage.value = error.message
+  } else {
+    saveMessage.value = 'Saved to Supabase.'
+  }
+
+  isSaving.value = false
 }
 
 const sheetFields = computed(() => [
@@ -499,11 +528,25 @@ function rollDiceCode(value) {
         </section>
       </section>
 
-      <div class="mt-10 flex justify-center">
+      <div class="mt-10 flex flex-wrap justify-center gap-3">
+        <button
+          v-if="canSaveCharacters"
+          class="sheet-export-button"
+          type="button"
+          :disabled="isSaving"
+          @click="saveCharacterToSupabase"
+        >
+          Save to Supabase
+        </button>
         <button class="sheet-export-button" type="button" @click="exportCharacterJson">
           Export to JSON
         </button>
       </div>
+
+      <p v-if="saveMessage" class="profile-message mx-auto mt-5 max-w-2xl text-center">{{ saveMessage }}</p>
+      <p v-if="saveErrorMessage" class="profile-message profile-message-error mx-auto mt-5 max-w-2xl text-center">
+        {{ saveErrorMessage }}
+      </p>
     </form>
   </main>
 </template>

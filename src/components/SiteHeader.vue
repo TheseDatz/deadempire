@@ -21,7 +21,7 @@
       >
         <RouterLink class="header-link header-link-red" to="/Rules">Rules Reference</RouterLink>
         <RouterLink class="header-link header-link-red" to="/log">Game Log</RouterLink>
-        <RouterLink class="header-link header-link-blue" to="/profile">Profile</RouterLink>
+        <RouterLink class="header-link header-link-blue" to="/profile">Login</RouterLink>
       </nav>
     </div>
   </header>

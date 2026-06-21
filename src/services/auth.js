@@ -37,12 +37,39 @@ export async function signInWithUsername(username, password) {
     return { error: new Error('Use only letters, numbers, underscores, or hyphens for username.') }
   }
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: usernameToEmail(username),
     password,
   })
 
-  return { error }
+  return { session: data.session, error }
+}
+
+export async function updatePassword(password) {
+  if (!supabase) {
+    return { error: new Error('Supabase is not configured.') }
+  }
+
+  if (password.length < 6) {
+    return { error: new Error('Password must be at least 6 characters.') }
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
+  if (sessionError) {
+    return { error: sessionError }
+  }
+
+  const userMetadata = sessionData.session?.user?.user_metadata || {}
+  const { data, error } = await supabase.auth.updateUser({
+    password,
+    data: {
+      ...userMetadata,
+      password_changed_at: new Date().toISOString(),
+    },
+  })
+
+  return { user: data.user, error }
 }
 
 export async function signOut() {
