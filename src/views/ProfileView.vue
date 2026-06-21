@@ -11,7 +11,6 @@ import {
 } from '../services/auth'
 import {
   MAX_PLAYER_CHARACTER_SHEETS,
-  createCharacterSheet,
   getOwnedCharacterSheetCount,
 } from '../services/characterSheets'
 
@@ -25,7 +24,6 @@ const session = ref(null)
 const isLoading = ref(true)
 const isSubmitting = ref(false)
 const isUpdatingPassword = ref(false)
-const isCreatingCharacter = ref(false)
 const characterSheetCount = ref(0)
 const message = ref('')
 const errorMessage = ref('')
@@ -136,18 +134,7 @@ async function handleCreateCharacter() {
     return
   }
 
-  isCreatingCharacter.value = true
-
-  const { character, error } = await createCharacterSheet()
-
-  if (error) {
-    errorMessage.value = error.message
-  } else {
-    characterSheetCount.value += 1
-    router.push(`/playercharacter/${character.id}`)
-  }
-
-  isCreatingCharacter.value = false
+  router.push('/character-wizard')
 }
 
 onMounted(async () => {
@@ -217,7 +204,7 @@ onUnmounted(() => {
             <button
               class="profile-button"
               type="button"
-              :disabled="isCreatingCharacter || !canCreateCharacter"
+              :disabled="!canCreateCharacter"
               @click="handleCreateCharacter"
             >
               Create Character

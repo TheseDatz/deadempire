@@ -4,6 +4,7 @@ import HomeView from '../views/HomeView.vue'
 import AboutView from '../views/AboutView.vue'
 import BestiaryView from '../views/BestiaryView.vue'
 import CharactersView from '../views/CharactersView.vue'
+import CharacterWizardView from '../views/CharacterWizardView.vue'
 import CombatView from '../views/CombatView.vue'
 import FactionsView from '../views/FactionsView.vue'
 import GameLogEntryView from '../views/GameLogEntryView.vue'
@@ -64,6 +65,12 @@ const router = createRouter({
       name: 'player-character',
       component: PlayerCharacterView,
       props: true,
+    },
+    {
+      path: '/character-wizard',
+      name: 'character-wizard',
+      component: CharacterWizardView,
+      meta: { requiresAuth: true },
     },
     {
       path: '/Information',
