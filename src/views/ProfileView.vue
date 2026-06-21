@@ -9,6 +9,11 @@ import {
   signOut,
   updatePassword,
 } from '../services/auth'
+import {
+  MAX_PLAYER_CHARACTER_SHEETS,
+  createCharacterSheet,
+  getOwnedCharacterSheetCount,
+} from '../services/characterSheets'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +25,8 @@ const session = ref(null)
 const isLoading = ref(true)
 const isSubmitting = ref(false)
 const isUpdatingPassword = ref(false)
+const isCreatingCharacter = ref(false)
+const characterSheetCount = ref(0)
 const message = ref('')
 const errorMessage = ref('')
 let unsubscribe = null
@@ -29,6 +36,7 @@ const displayName = computed(() => userEmail.value.replace(/@dead-empire\.local$
 const needsInitialPasswordChange = computed(() => {
   return Boolean(session.value && !session.value.user?.user_metadata?.password_changed_at)
 })
+const canCreateCharacter = computed(() => characterSheetCount.value < MAX_PLAYER_CHARACTER_SHEETS)
 const redirectPath = computed(() => {
   const redirect = route.query.redirect
   return typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : ''
@@ -58,6 +66,21 @@ async function handleSignIn() {
   }
 
   isSubmitting.value = false
+}
+
+async function refreshCharacterSheetCount() {
+  if (!session.value) {
+    characterSheetCount.value = 0
+    return
+  }
+
+  const { count, error } = await getOwnedCharacterSheetCount()
+
+  if (error) {
+    errorMessage.value = error.message
+  } else {
+    characterSheetCount.value = count
+  }
 }
 
 async function handlePasswordChange() {
@@ -105,6 +128,28 @@ async function handleSignOut() {
   isSubmitting.value = false
 }
 
+async function handleCreateCharacter() {
+  clearFeedback()
+
+  if (!canCreateCharacter.value) {
+    errorMessage.value = `Each account can have up to ${MAX_PLAYER_CHARACTER_SHEETS} character sheets.`
+    return
+  }
+
+  isCreatingCharacter.value = true
+
+  const { character, error } = await createCharacterSheet()
+
+  if (error) {
+    errorMessage.value = error.message
+  } else {
+    characterSheetCount.value += 1
+    router.push(`/playercharacter/${character.id}`)
+  }
+
+  isCreatingCharacter.value = false
+}
+
 onMounted(async () => {
   const { session: activeSession, error } = await getSession()
 
@@ -113,10 +158,12 @@ onMounted(async () => {
   }
 
   session.value = activeSession
+  await refreshCharacterSheetCount()
   isLoading.value = false
 
-  unsubscribe = onAuthStateChange((activeSession) => {
+  unsubscribe = onAuthStateChange(async (activeSession) => {
     session.value = activeSession
+    await refreshCharacterSheetCount()
   })
 })
 
@@ -166,9 +213,22 @@ onUnmounted(() => {
             </div>
           </form>
 
-          <button class="profile-button mt-6" type="button" :disabled="isSubmitting" @click="handleSignOut">
-            Sign Out
-          </button>
+          <div class="profile-actions mt-6">
+            <button
+              class="profile-button"
+              type="button"
+              :disabled="isCreatingCharacter || !canCreateCharacter"
+              @click="handleCreateCharacter"
+            >
+              Create Character
+            </button>
+            <button class="profile-button profile-button-secondary" type="button" :disabled="isSubmitting" @click="handleSignOut">
+              Sign Out
+            </button>
+          </div>
+          <p class="mt-3 text-sm font-bold text-cyan-100/70">
+            Character sheets: {{ characterSheetCount }} / {{ MAX_PLAYER_CHARACTER_SHEETS }}
+          </p>
         </template>
 
         <form v-else class="profile-form" @submit.prevent="handleSignIn">

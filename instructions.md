@@ -99,8 +99,8 @@ Setup:
 
 1. Run `supabase/character_sheets.sql` in the Supabase SQL editor.
 2. Sign in as an admin user.
-3. Open `/admin`.
-4. Import existing character JSON files.
+3. Players can create blank character sheets from `/profile`.
+4. Admins and the player who created a sheet can save changes from the character sheet page.
 
 Backup:
 
@@ -108,7 +108,7 @@ Backup:
 2. Click `Download Backup`.
 3. Keep the downloaded JSON somewhere safe before large edits.
 
-The import accepts a single character JSON object, an array of character JSON objects, or a backup object with a `character_sheets` array. Public site visitors can read active character sheets. Only users with admin app metadata can insert, update, or delete rows.
+Public site visitors can read active character sheets. Authenticated users can create up to two active player character sheets, and only the sheet owner or an admin can update or delete them. Backstory fields are hidden in the app unless the visitor is the sheet owner or an admin.
 
 ## Username-Only Login
 

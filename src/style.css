@@ -345,6 +345,19 @@
     background: rgba(79, 195, 255, 0.08);
   }
 
+  .character-card-photo-empty {
+    display: grid;
+    place-items: center;
+  }
+
+  .character-card-photo-empty::before {
+    content: '?';
+    color: rgba(217, 245, 255, 0.45);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 56px;
+    font-weight: 900;
+  }
+
   .character-level {
     flex: 0 0 auto;
     border: 1px solid rgba(79, 195, 255, 0.44);
@@ -724,6 +737,21 @@
   .sheet-export-button:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+  }
+
+  .sheet-danger-button {
+    border-color: rgba(255, 59, 36, 0.72);
+    background: linear-gradient(180deg, rgba(255, 59, 36, 0.22), rgba(160, 20, 14, 0.12));
+    color: #ffd7d2;
+  }
+
+  .sheet-danger-button:hover:not(:disabled) {
+    border-color: #ff8a7f;
+    box-shadow:
+      inset 0 0 24px rgba(255, 59, 36, 0.12),
+      0 0 8px rgba(255, 255, 255, 0.24),
+      0 0 22px rgba(255, 59, 36, 0.58),
+      0 0 42px rgba(224, 22, 19, 0.36);
   }
 
   .health-row {

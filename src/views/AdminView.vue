@@ -2,12 +2,9 @@
 import { ref } from 'vue'
 import {
   exportCharacterSheetBackup,
-  importCharacterSheets,
   isSupabaseConfigured,
 } from '../services/characterSheets'
 
-const importCategory = ref('player')
-const importFile = ref(null)
 const isWorking = ref(false)
 const message = ref('')
 const errorMessage = ref('')
@@ -47,34 +44,6 @@ async function downloadCharacterBackup() {
   isWorking.value = false
 }
 
-async function importCharacterJson() {
-  clearFeedback()
-
-  const file = importFile.value?.files?.[0]
-
-  if (!file) {
-    errorMessage.value = 'Choose a JSON file to import.'
-    return
-  }
-
-  isWorking.value = true
-
-  try {
-    const payload = JSON.parse(await file.text())
-    const { count, error } = await importCharacterSheets(payload, importCategory.value)
-
-    if (error) {
-      errorMessage.value = error.message
-    } else {
-      message.value = `Imported ${count} character ${count === 1 ? 'sheet' : 'sheets'}.`
-      importFile.value.value = ''
-    }
-  } catch (error) {
-    errorMessage.value = error.message
-  } finally {
-    isWorking.value = false
-  }
-}
 </script>
 
 <template>
@@ -92,7 +61,7 @@ async function importCharacterJson() {
 
         <template v-else>
           <p class="admin-copy mt-3">
-            Character sheets are stored in Supabase as JSON. Download a backup before large edits or import existing sheet JSON here.
+            Character sheets are stored in Supabase as JSON. Download a backup before large edits.
           </p>
 
           <div class="admin-actions mt-6">
@@ -101,24 +70,6 @@ async function importCharacterJson() {
             </button>
           </div>
 
-          <form class="admin-import-form mt-8" @submit.prevent="importCharacterJson">
-            <label>
-              <span>Import Category</span>
-              <select v-model="importCategory">
-                <option value="player">Player Character</option>
-                <option value="npc">Important NPC</option>
-              </select>
-            </label>
-
-            <label>
-              <span>Character JSON</span>
-              <input ref="importFile" type="file" accept="application/json,.json" />
-            </label>
-
-            <button class="profile-button" type="submit" :disabled="isWorking">
-              Import JSON
-            </button>
-          </form>
         </template>
 
         <p v-if="message" class="profile-message mt-5">{{ message }}</p>

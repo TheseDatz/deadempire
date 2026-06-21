@@ -1,10 +1,14 @@
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   character: {
     type: Object,
     required: true,
   },
 })
+
+const characterName = computed(() => props.character.name || 'Unnamed Character')
 </script>
 
 <template>
@@ -12,13 +16,14 @@ defineProps({
     class="character-card"
     :to="`/playercharacter/${character.id}`"
   >
-    <img class="character-card-photo" :src="character.photo" :alt="character.name" />
+    <img v-if="character.photo" class="character-card-photo" :src="character.photo" :alt="characterName" />
+    <div v-else class="character-card-photo character-card-photo-empty" aria-hidden="true"></div>
 
     <div class="min-w-0">
       <div class="flex items-start justify-between gap-3">
         <div>
           <h3 class="truncate font-serif text-2xl font-bold text-white">
-            {{ character.name }}
+            {{ characterName }}
           </h3>
           <p class="mt-1 text-sm uppercase tracking-[0.18em] text-cyan-200/80">
             {{ character.playerName }}

@@ -1,8 +1,8 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { loadAllCharacters } from '../data/characters'
-import { getSession, isAdminSession } from '../services/auth'
-import { saveCharacterSheet } from '../services/characterSheets'
+import { canManageCharacterSheet, deleteCharacterSheet, saveCharacterSheet } from '../services/characterSheets'
 
 const props = defineProps({
   characterName: {
@@ -10,6 +10,8 @@ const props = defineProps({
     required: true,
   },
 })
+
+const router = useRouter()
 
 const allCharacters = ref([])
 const isLoading = ref(true)
@@ -22,7 +24,9 @@ const equipmentPage = ref(1)
 const emptySkillRows = ref({})
 const health = ref('Healthy')
 const canSaveCharacters = ref(false)
+const canViewBackstory = ref(false)
 const isSaving = ref(false)
+const isDeleting = ref(false)
 const saveMessage = ref('')
 const saveErrorMessage = ref('')
 
@@ -32,12 +36,20 @@ const character = computed(() => {
 
 onMounted(async () => {
   try {
-    const [{ session }, data] = await Promise.all([getSession(), loadAllCharacters()])
-    canSaveCharacters.value = isAdminSession(session)
+    const data = await loadAllCharacters()
     allCharacters.value = data.allCharacters
 
     if (!character.value) {
       errorMessage.value = 'Character file not found.'
+    } else {
+      const { canManage, error } = await canManageCharacterSheet(character.value._slug)
+
+      if (error) {
+        errorMessage.value = error.message
+      } else {
+        canSaveCharacters.value = canManage
+        canViewBackstory.value = canManage
+      }
     }
   } catch (error) {
     errorMessage.value = error.message
@@ -183,6 +195,7 @@ function buildCharacterJson() {
   delete exportData.forceSummary
   delete exportData.specialAbilitiesText
   delete exportData._category
+  delete exportData._slug
   return exportData
 }
 
@@ -201,17 +214,44 @@ function exportCharacterJson() {
 async function saveCharacterToSupabase() {
   saveMessage.value = ''
   saveErrorMessage.value = ''
+
+  if (!window.confirm('Save this character sheet and overwrite the database copy?')) {
+    return
+  }
+
   isSaving.value = true
 
-  const { error } = await saveCharacterSheet(buildCharacterJson(), sheet.value._category || 'player')
+  const { error } = await saveCharacterSheet(buildCharacterJson(), sheet.value._slug, sheet.value._category || 'player')
 
   if (error) {
     saveErrorMessage.value = error.message
   } else {
-    saveMessage.value = 'Saved to Supabase.'
+    saveMessage.value = 'Saved.'
   }
 
   isSaving.value = false
+}
+
+async function deleteCharacterFromSupabase() {
+  saveMessage.value = ''
+  saveErrorMessage.value = ''
+
+  const characterName = sheet.value.name || 'this character sheet'
+
+  if (!window.confirm(`Delete ${characterName}? This cannot be undone.`)) {
+    return
+  }
+
+  isDeleting.value = true
+
+  const { error } = await deleteCharacterSheet(sheet.value._slug)
+
+  if (error) {
+    saveErrorMessage.value = error.message
+    isDeleting.value = false
+  } else {
+    router.push('/profile')
+  }
 }
 
 const sheetFields = computed(() => [
@@ -281,7 +321,7 @@ function rollDiceCode(value) {
     <form v-else class="character-sheet mx-auto max-w-7xl">
       <header class="sheet-title">
         <p class="text-sm uppercase tracking-[0.32em] text-cyan-100/80">Dead Empire</p>
-        <h1 class="font-serif text-5xl font-bold text-white">{{ sheet.name }}</h1>
+        <h1 class="font-serif text-5xl font-bold text-white">{{ sheet.name || 'Unnamed Character' }}</h1>
       </header>
 
       <section class="sheet-grid mt-8">
@@ -522,7 +562,7 @@ function rollDiceCode(value) {
           </div>
         </section>
 
-        <section class="sheet-panel sheet-panel-full">
+        <section v-if="canViewBackstory" class="sheet-panel sheet-panel-full">
           <h2 class="sheet-heading">Background</h2>
           <textarea v-model="sheet.background" class="mt-4 min-h-36" />
         </section>
@@ -533,10 +573,19 @@ function rollDiceCode(value) {
           v-if="canSaveCharacters"
           class="sheet-export-button"
           type="button"
-          :disabled="isSaving"
+          :disabled="isSaving || isDeleting"
           @click="saveCharacterToSupabase"
         >
-          Save to Supabase
+          Save
+        </button>
+        <button
+          v-if="canSaveCharacters"
+          class="sheet-export-button sheet-danger-button"
+          type="button"
+          :disabled="isSaving || isDeleting"
+          @click="deleteCharacterFromSupabase"
+        >
+          Delete
         </button>
         <button class="sheet-export-button" type="button" @click="exportCharacterJson">
           Export to JSON
