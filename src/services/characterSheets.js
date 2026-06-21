@@ -43,6 +43,10 @@ function createBlankSheet(slug) {
     equipment: [],
     advantages: [],
     health: 'Healthy',
+    healthCounts: {
+      stunned: 0,
+      wounded: 0,
+    },
     credits: '0',
     newRepublicCredits: '0',
     peggats: '0',

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { loadAllCharacters } from '../data/characters'
+import { getSession } from '../services/auth'
 import { canManageCharacterSheet, deleteCharacterSheet, saveCharacterSheet } from '../services/characterSheets'
 
 const props = defineProps({
@@ -24,6 +25,7 @@ const forcePowers = ref([])
 const advantages = ref([])
 const equipmentPage = ref(1)
 const health = ref('Healthy')
+const healthCounts = ref({ stunned: 0, wounded: 0 })
 const canSaveCharacters = ref(false)
 const canViewBackstory = ref(false)
 const isSaving = ref(false)
@@ -32,6 +34,7 @@ const saveMessage = ref('')
 const saveErrorMessage = ref('')
 const isCombatRolling = ref(false)
 const combatActionCount = ref(1)
+const canViewCharacterPhoto = ref(false)
 
 const character = computed(() => {
   return allCharacters.value.find((entry) => entry.id === props.characterName) ?? null
@@ -39,10 +42,16 @@ const character = computed(() => {
 const isForceSensitive = computed(() => {
   return String(sheet.value.force?.forceSensitive ?? '').trim().toLowerCase() === 'yes'
 })
+const characterPhotoAlt = computed(() => sheet.value.name || 'Character illustration')
+const healthClass = computed(() => {
+  const normalizedHealth = String(health.value || '').trim().toLowerCase().replace(/\s+/g, '-')
+  return normalizedHealth ? `character-sheet-health-${normalizedHealth}` : ''
+})
 
 onMounted(async () => {
   try {
-    const data = await loadAllCharacters()
+    const [{ session }, data] = await Promise.all([getSession(), loadAllCharacters()])
+    canViewCharacterPhoto.value = Boolean(session)
     allCharacters.value = data.allCharacters
 
     if (!character.value) {
@@ -94,6 +103,10 @@ watch(
     advantages.value = (nextCharacter.advantages ?? []).map((item) => ({ ...item }))
     equipmentPage.value = 1
     health.value = nextCharacter.health ?? 'Healthy'
+    healthCounts.value = {
+      stunned: Math.max(0, Number(nextCharacter.healthCounts?.stunned ?? 0)),
+      wounded: Math.min(2, Math.max(0, Number(nextCharacter.healthCounts?.wounded ?? 0))),
+    }
   },
   { immediate: true },
 )
@@ -200,6 +213,20 @@ function removeSkill(attribute, index) {
   attribute.skills.splice(index, 1)
 }
 
+function incrementHealthCount(key) {
+  const limit = key === 'wounded' ? 2 : Infinity
+  healthCounts.value[key] = Math.min(limit, Number(healthCounts.value[key] || 0) + 1)
+}
+
+function decrementHealthCount(key) {
+  healthCounts.value[key] = Math.max(0, Number(healthCounts.value[key] || 0) - 1)
+}
+
+function normalizeHealthCount(key) {
+  const limit = key === 'wounded' ? 2 : Infinity
+  healthCounts.value[key] = Math.min(limit, Math.max(0, Math.floor(Number(healthCounts.value[key] || 0))))
+}
+
 function previousEquipmentPage() {
   equipmentPage.value = Math.max(1, equipmentPage.value - 1)
 }
@@ -233,6 +260,7 @@ function buildCharacterJson() {
     armor: armor.value,
     equipment: equipment.value,
     health: health.value,
+    healthCounts: healthCounts.value,
     credits: sheet.value.credits ?? '0',
     newRepublicCredits: sheet.value.newRepublicCredits ?? '0',
     peggats: sheet.value.peggats ?? '0',
@@ -439,6 +467,13 @@ function combatPenalty() {
   }
 }
 
+function healthRollPenalty() {
+  return {
+    diceCount: -(Number(healthCounts.value.stunned || 0) + Number(healthCounts.value.wounded || 0)),
+    modifier: 0,
+  }
+}
+
 function applyDiceAdjustments(value, adjustments = []) {
   const dice = parseDiceCode(value)
 
@@ -511,21 +546,23 @@ function rollArmorStrength(armorItem) {
 }
 
 function rollAttributeDice(attribute) {
-  rollDiceCode(attribute.name === 'Dexterity' ? dexAdjustedDiceCode(attribute.dice) : attribute.dice)
+  const diceCode = attribute.name === 'Dexterity' ? dexAdjustedDiceCode(attribute.dice) : attribute.dice
+  rollDiceCode(applyDiceAdjustments(diceCode, [healthRollPenalty()]))
 }
 
 function rollSkillDice(attribute, skill) {
-  rollDiceCode(attribute.name === 'Dexterity' ? dexAdjustedDiceCode(skill.dice) : skill.dice)
+  const diceCode = attribute.name === 'Dexterity' ? dexAdjustedDiceCode(skill.dice) : skill.dice
+  rollDiceCode(applyDiceAdjustments(diceCode, [healthRollPenalty()]))
 }
 
 function isValidAttributeRoll(attribute) {
   const diceCode = attribute.name === 'Dexterity' ? dexAdjustedDiceCode(attribute.dice) : attribute.dice
-  return isValidDiceCode(applyDiceAdjustments(diceCode, [combatPenalty()]))
+  return isValidDiceCode(applyDiceAdjustments(diceCode, [healthRollPenalty(), combatPenalty()]))
 }
 
 function isValidSkillRoll(attribute, skill) {
   const diceCode = attribute.name === 'Dexterity' ? dexAdjustedDiceCode(skill.dice) : skill.dice
-  return isValidDiceCode(applyDiceAdjustments(diceCode, [combatPenalty()]))
+  return isValidDiceCode(applyDiceAdjustments(diceCode, [healthRollPenalty(), combatPenalty()]))
 }
 
 function normalizeCombatActionCount() {
@@ -546,7 +583,7 @@ function increaseCombatActions() {
     <div v-if="isLoading" class="mx-auto max-w-7xl text-cyan-100/80">Loading character file...</div>
     <div v-else-if="errorMessage" class="mx-auto max-w-7xl text-red-200">{{ errorMessage }}</div>
 
-    <form v-else class="character-sheet mx-auto max-w-7xl">
+    <form v-else class="character-sheet mx-auto max-w-7xl" :class="healthClass">
       <header class="sheet-title">
         <p class="text-sm uppercase tracking-[0.32em] text-cyan-100/80">Dead Empire</p>
         <h1 class="font-serif text-5xl font-bold text-white">{{ sheet.name || 'Unnamed Character' }}</h1>
@@ -579,7 +616,8 @@ function increaseCombatActions() {
         </div>
 
         <aside class="sheet-panel">
-          <img class="sheet-portrait" :src="sheet.photo" :alt="sheet.name" />
+          <img v-if="canViewCharacterPhoto && sheet.photo" class="sheet-portrait" :src="sheet.photo" :alt="characterPhotoAlt" />
+          <div v-else class="sheet-portrait sheet-portrait-empty" aria-hidden="true"></div>
           <label class="sheet-field mt-4">
             <span>Character Illustration</span>
             <input v-model="sheet.photo" />
@@ -589,7 +627,33 @@ function increaseCombatActions() {
             <div class="mt-4 space-y-3">
               <label v-for="state in healthStates" :key="state" class="health-row">
                 <span>{{ state }}</span>
-                <input v-model="health" type="radio" name="health" :value="state" />
+                <span class="health-row-controls">
+                  <span v-if="state === 'Stunned'" class="health-count-control">
+                    <button type="button" @click.prevent="decrementHealthCount('stunned')">-</button>
+                    <input
+                      v-model.number="healthCounts.stunned"
+                      type="number"
+                      min="0"
+                      aria-label="Stunned count"
+                      @change="normalizeHealthCount('stunned')"
+                    />
+                    <button type="button" @click.prevent="incrementHealthCount('stunned')">+</button>
+                  </span>
+                  <span v-else-if="state === 'Wounded'" class="health-count-control">
+                    <button type="button" @click.prevent="decrementHealthCount('wounded')">-</button>
+                    <input
+                      v-model.number="healthCounts.wounded"
+                      type="number"
+                      min="0"
+                      max="2"
+                      aria-label="Wounded count"
+                      @change="normalizeHealthCount('wounded')"
+                    />
+                    <button type="button" @click.prevent="incrementHealthCount('wounded')">+</button>
+                  </span>
+                  <span v-else class="health-count-spacer" aria-hidden="true"></span>
+                  <input v-model="health" type="radio" name="health" :value="state" />
+                </span>
               </label>
             </div>
           </section>

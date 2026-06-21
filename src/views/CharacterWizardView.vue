@@ -362,8 +362,12 @@ function buildCharacterSheet(slug) {
         name: item.name.trim(),
         description: `Dice modifier: ${formatDiceModifier(item.diceModifier)}`,
         diceModifier: Number(item.diceModifier || 0),
-      })),
+    })),
     health: 'Healthy',
+    healthCounts: {
+      stunned: 0,
+      wounded: 0,
+    },
     credits: template.credits,
     newRepublicCredits: '0',
     peggats: '0',

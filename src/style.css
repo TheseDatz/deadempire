@@ -372,6 +372,28 @@
 
   .character-sheet {
     color: #d9f5ff;
+    --sheet-health-border-color: rgba(79, 195, 255, 0.32);
+    --sheet-health-field-border-color: rgba(79, 195, 255, 0.22);
+  }
+
+  .character-sheet-health-stunned {
+    --sheet-health-border-color: rgba(255, 255, 255, 0.78);
+    --sheet-health-field-border-color: rgba(255, 255, 255, 0.78);
+  }
+
+  .character-sheet-health-wounded {
+    --sheet-health-border-color: rgba(255, 59, 36, 0.78);
+    --sheet-health-field-border-color: rgba(255, 59, 36, 0.78);
+  }
+
+  .character-sheet-health-incapacitated {
+    --sheet-health-border-color: rgba(0, 0, 0, 0.9);
+    --sheet-health-field-border-color: rgba(0, 0, 0, 0.9);
+  }
+
+  .character-sheet-health-mortally-wounded {
+    --sheet-health-border-color: rgba(110, 0, 0, 0.9);
+    --sheet-health-field-border-color: rgba(110, 0, 0, 0.9);
   }
 
   .galaxy-page,
@@ -408,7 +430,7 @@
   }
 
   .sheet-title {
-    border: 1px solid rgba(79, 195, 255, 0.4);
+    border: 1px solid var(--sheet-health-border-color, rgba(79, 195, 255, 0.32));
     background: linear-gradient(180deg, rgba(24, 37, 51, 0.86), rgba(9, 16, 24, 0.9));
     padding: 24px;
     text-align: center;
@@ -424,7 +446,7 @@
   }
 
   .sheet-panel {
-    border: 1px solid rgba(79, 195, 255, 0.32);
+    border: 1px solid var(--sheet-health-border-color, rgba(79, 195, 255, 0.32));
     background: rgba(9, 16, 24, 0.68);
     padding: 20px;
     box-shadow:
@@ -437,7 +459,7 @@
   }
 
   .sheet-heading {
-    border-bottom: 1px solid rgba(79, 195, 255, 0.28);
+    border-bottom: 1px solid var(--sheet-health-field-border-color, rgba(79, 195, 255, 0.22));
     padding-bottom: 8px;
     font-family: Georgia, 'Times New Roman', serif;
     font-size: 24px;
@@ -458,7 +480,7 @@
   }
 
   .sheet-add-button {
-    border: 1px solid rgba(79, 195, 255, 0.5);
+    border: 1px solid var(--sheet-health-border-color, rgba(79, 195, 255, 0.32));
     background: rgba(79, 195, 255, 0.1);
     padding: 8px 12px;
     color: #d9f5ff;
@@ -508,7 +530,7 @@
   }
 
   .sheet-icon-add-button {
-    border: 1px solid rgba(79, 195, 255, 0.58);
+    border: 1px solid var(--sheet-health-border-color, rgba(79, 195, 255, 0.32));
     background: rgba(79, 195, 255, 0.12);
     color: #d9f5ff;
   }
@@ -608,7 +630,7 @@
   .sheet-panel input,
   .sheet-panel textarea {
     width: 100%;
-    border: 1px solid rgba(79, 195, 255, 0.22);
+    border: 1px solid var(--sheet-health-field-border-color, rgba(79, 195, 255, 0.22));
     background: rgba(3, 7, 12, 0.48);
     padding: 9px 10px;
     color: #f8fdff;
@@ -646,7 +668,7 @@
     width: 28px;
     height: 28px;
     place-items: center;
-    border: 1px solid rgba(79, 195, 255, 0.58);
+    border: 1px solid var(--sheet-health-border-color, rgba(79, 195, 255, 0.32));
     border-radius: 999px;
     background: rgba(79, 195, 255, 0.12);
     color: #d9f5ff;
@@ -679,12 +701,25 @@
     aspect-ratio: 1;
     width: 100%;
     object-fit: cover;
-    border: 1px solid rgba(79, 195, 255, 0.42);
+    border: 1px solid var(--sheet-health-border-color, rgba(79, 195, 255, 0.32));
     background: rgba(79, 195, 255, 0.08);
   }
 
+  .sheet-portrait-empty {
+    display: grid;
+    place-items: center;
+  }
+
+  .sheet-portrait-empty::before {
+    content: '?';
+    color: rgba(217, 245, 255, 0.45);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 76px;
+    font-weight: 900;
+  }
+
   .attribute-block {
-    border-top: 1px solid rgba(79, 195, 255, 0.18);
+    border-top: 1px solid var(--sheet-health-field-border-color, rgba(79, 195, 255, 0.22));
     padding-top: 12px;
   }
 
@@ -739,7 +774,7 @@
     grid-template-columns: minmax(180px, 0.35fr) minmax(320px, 1fr);
     gap: 10px;
     align-items: end;
-    border: 1px solid rgba(79, 195, 255, 0.24);
+    border: 1px solid var(--sheet-health-field-border-color, rgba(79, 195, 255, 0.22));
     background: rgba(3, 7, 12, 0.36);
     padding: 14px;
   }
@@ -761,7 +796,7 @@
     grid-template-columns: minmax(180px, 0.35fr) minmax(320px, 1fr);
     gap: 10px;
     align-items: end;
-    border: 1px solid rgba(79, 195, 255, 0.24);
+    border: 1px solid var(--sheet-health-field-border-color, rgba(79, 195, 255, 0.22));
     background: rgba(3, 7, 12, 0.36);
     padding: 14px;
   }
@@ -868,10 +903,10 @@
   }
 
   .health-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 14px;
+    gap: 12px;
     color: rgba(217, 245, 255, 0.82);
     font-weight: 700;
   }
@@ -2382,7 +2417,7 @@
     align-items: end;
     justify-content: space-between;
     gap: 16px;
-    border-bottom: 1px solid rgba(79, 195, 255, 0.28);
+    border-bottom: 1px solid var(--sheet-health-field-border-color, rgba(79, 195, 255, 0.22));
     padding-bottom: 8px;
   }
 
@@ -2419,9 +2454,55 @@
     accent-color: #4fc3ff;
   }
 
+  .health-row-controls {
+    display: grid;
+    grid-template-columns: 106px 18px;
+    gap: 12px;
+    align-items: center;
+    justify-self: end;
+  }
+
+  .health-count-control {
+    display: grid;
+    grid-template-columns: 18px 54px 18px;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .health-count-spacer {
+    display: block;
+    width: 106px;
+  }
+
+  .health-count-control button {
+    display: grid;
+    width: 18px;
+    height: 18px;
+    place-items: center;
+    border: 1px solid var(--sheet-health-border-color, rgba(79, 195, 255, 0.32));
+    border-radius: 999px;
+    background: rgba(79, 195, 255, 0.1);
+    color: #d9f5ff;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .health-row .health-count-control input {
+    width: 54px;
+    height: 26px;
+    border: 1px solid var(--sheet-health-field-border-color, rgba(79, 195, 255, 0.22));
+    background: rgba(3, 7, 12, 0.48);
+    color: #f8fdff;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+    accent-color: auto;
+  }
+
   .combat-action-control input {
     width: 48px;
-    border: 1px solid rgba(79, 195, 255, 0.24);
+    border: 1px solid var(--sheet-health-field-border-color, rgba(79, 195, 255, 0.22));
     background: rgba(3, 7, 12, 0.48);
     padding: 5px 6px;
     color: #f8fdff;
@@ -2434,7 +2515,7 @@
     width: 22px;
     height: 22px;
     place-items: center;
-    border: 1px solid rgba(79, 195, 255, 0.48);
+    border: 1px solid var(--sheet-health-border-color, rgba(79, 195, 255, 0.32));
     border-radius: 999px;
     background: rgba(79, 195, 255, 0.1);
     color: #d9f5ff;
@@ -3269,3 +3350,4 @@ input[type='reset'] {
     grid-template-columns: 1fr;
   }
 }
+

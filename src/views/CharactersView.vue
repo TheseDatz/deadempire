@@ -2,15 +2,18 @@
 import { onMounted, ref } from 'vue'
 import CharacterProfileCard from '../components/CharacterProfileCard.vue'
 import { loadAllCharacters } from '../data/characters'
+import { getSession } from '../services/auth'
 
 const playerCharacters = ref([])
 const importantNpcs = ref([])
+const canViewCharacterPhotos = ref(false)
 const isLoading = ref(true)
 const errorMessage = ref('')
 
 onMounted(async () => {
   try {
-    const data = await loadAllCharacters()
+    const [{ session }, data] = await Promise.all([getSession(), loadAllCharacters()])
+    canViewCharacterPhotos.value = Boolean(session)
     playerCharacters.value = data.playerCharacters
     importantNpcs.value = data.importantNpcs
   } catch (error) {
@@ -36,6 +39,7 @@ onMounted(async () => {
             v-for="character in playerCharacters"
             :key="character.name"
             :character="character"
+            :show-photo="canViewCharacterPhotos"
           />
         </div>
       </section>
@@ -53,6 +57,7 @@ onMounted(async () => {
             v-for="character in importantNpcs"
             :key="character.name"
             :character="character"
+            :show-photo="canViewCharacterPhotos"
           />
         </div>
       </section>

@@ -5,6 +5,16 @@ defineProps({
     required: true,
   },
 })
+
+const bulletLead = (bullet) => {
+  const colonIndex = bullet.indexOf(':')
+  return colonIndex === -1 ? '' : bullet.slice(0, colonIndex + 1)
+}
+
+const bulletRest = (bullet) => {
+  const colonIndex = bullet.indexOf(':')
+  return colonIndex === -1 ? bullet : bullet.slice(colonIndex + 1)
+}
 </script>
 
 <template>
@@ -13,7 +23,12 @@ defineProps({
     <p>{{ reference.summary }}</p>
 
     <ul v-if="reference.bullets" class="reference-bullets">
-      <li v-for="bullet in reference.bullets" :key="bullet">{{ bullet }}</li>
+      <li v-for="bullet in reference.bullets" :key="bullet">
+        <template v-if="bulletLead(bullet)">
+          <strong>{{ bulletLead(bullet) }}</strong>{{ bulletRest(bullet) }}
+        </template>
+        <template v-else>{{ bullet }}</template>
+      </li>
     </ul>
 
     <div v-if="reference.rows" class="damage-chart-table">

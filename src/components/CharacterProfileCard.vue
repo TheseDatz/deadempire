@@ -6,6 +6,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  showPhoto: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const characterName = computed(() => props.character.name || 'Unnamed Character')
@@ -17,7 +21,7 @@ const characterQuote = computed(() => props.character.quote || props.character.t
     class="character-card"
     :to="`/playercharacter/${character.id}`"
   >
-    <img v-if="character.photo" class="character-card-photo" :src="character.photo" :alt="characterName" />
+    <img v-if="showPhoto && character.photo" class="character-card-photo" :src="character.photo" :alt="characterName" />
     <div v-else class="character-card-photo character-card-photo-empty" aria-hidden="true"></div>
 
     <div class="min-w-0">

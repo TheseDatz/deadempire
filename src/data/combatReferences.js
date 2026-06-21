@@ -12,6 +12,17 @@ export const combatReferences = [
     ],
   },
   {
+    title: 'Damage Effects',
+    summary: 'Track penalties, lost actions, and recovery after a character takes damage.',
+    bullets: [
+      'Stunned: -1D to skill and attribute rolls for the rest of this round and the next round. The stun still counts for 30 minutes, or until the character rests for 1 minute.',
+      'Too many stuns: if active stuns equal the number before the character\'s Strength D, the character is unconscious for 2D minutes. Easy first aid can revive them.',
+      'Wounded: falls prone, takes no more actions this round, and suffers -1D to skill and attribute rolls until healed.',
+      'Wounded twice: falls prone, takes no more actions this round, and suffers -2D to skill and attribute rolls until healed. Another wound incapacitates the character.',
+      'Incapacitated: falls prone, is unconscious for 10D minutes, and can do nothing until healed. Another wound or incapacitated result makes the character mortally wounded.',
+    ],
+  },
+  {
     title: 'Range Difficulties',
     summary: 'Base shooting difficulty by range band.',
     columns: ['Range', 'Difficulty'],
