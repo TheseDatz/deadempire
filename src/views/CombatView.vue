@@ -8,6 +8,55 @@ const combatants = ref([])
 const turnNumber = ref(1)
 const isLoading = ref(true)
 const errorMessage = ref('')
+const showInstructions = ref(false)
+
+const combatInstructions = [
+  {
+    title: 'Start the round',
+    details:
+      'Each round is about five seconds. Ask every combatant what they are trying to do and note how many actions they are taking.',
+  },
+  {
+    title: 'Apply action costs',
+    details:
+      'Drawing a weapon, reloading, switching to stun, throwing a grenade, attacking, dodging, or parrying each counts as an action. Multiple actions usually reduce all rolls that round by -1D per extra action.',
+  },
+  {
+    title: 'Check surprise and order',
+    details:
+      'If one side is surprised, the attackers take their first action before the surprised side can dodge or parry. Otherwise, use the tracker order and move through combatants.',
+  },
+  {
+    title: 'Set attack difficulty',
+    details:
+      'For ranged attacks, use range: point-blank is Very Easy, short is Easy, medium is Moderate, and long is Difficult. For melee, use the weapon difficulty. Brawling is usually Very Easy.',
+  },
+  {
+    title: 'Handle reactions',
+    details:
+      'Targets may dodge ranged attacks, parry melee attacks, or use a full reaction as their only action. A normal reaction roll becomes the new difficulty for that attack type for the rest of the round. A full reaction adds the roll to the attack difficulty.',
+  },
+  {
+    title: 'Roll the attack',
+    details:
+      'Roll the proper skill or default attribute. Add fire control if the weapon has it, then compare the total to the final difficulty. If the roll meets or beats the number, the attack hits.',
+  },
+  {
+    title: 'Resolve cover and blasts',
+    details:
+      'Add visibility or physical cover modifiers before the attack roll. If a covered target is missed only because of cover, roll damage against the cover and pass reduced damage through if it breaks. For grenades, place the blast or roll deviation on a miss.',
+  },
+  {
+    title: 'Roll damage',
+    details:
+      'Roll weapon damage against the target Strength plus armor. Compare the difference on the damage chart and update health, penalties, armor damage, or weapon damage as needed.',
+  },
+  {
+    title: 'End the round',
+    details:
+      'Apply stun and wound effects, mark ammo or fire-rate limits, clear reactions that only lasted this round, advance the turn, and start the next five-second round.',
+  },
+]
 
 function getStrength(character) {
   return character.attributes?.find((attribute) => attribute.name === 'Strength')?.dice ?? '2D'
@@ -80,6 +129,7 @@ function sortCombatants() {
         <button type="button" @click="nextCombatant">Next</button>
         <button type="button" @click="sortCombatants">Sort</button>
         <button type="button" @click="addCombatant">Add Combatant</button>
+        <button type="button" @click="showInstructions = true">Instructions</button>
       </div>
 
       <p v-if="isLoading" class="mt-8 text-cyan-100/80">Loading combatants...</p>
@@ -95,6 +145,30 @@ function sortCombatants() {
         />
       </div>
     </section>
+
+    <div
+      v-if="showInstructions"
+      class="combat-instructions-backdrop"
+      role="presentation"
+      @click.self="showInstructions = false"
+    >
+      <section class="combat-instructions" role="dialog" aria-modal="true" aria-labelledby="combat-instructions-title">
+        <div class="combat-instructions-header">
+          <div>
+            <p>Round Guide</p>
+            <h2 id="combat-instructions-title">Combat Instructions</h2>
+          </div>
+          <button type="button" aria-label="Close combat instructions" @click="showInstructions = false">Close</button>
+        </div>
+
+        <ol class="combat-instructions-list">
+          <li v-for="instruction in combatInstructions" :key="instruction.title">
+            <strong>{{ instruction.title }}</strong>
+            <span>{{ instruction.details }}</span>
+          </li>
+        </ol>
+      </section>
+    </div>
 
     <ReferenceCharts />
   </main>

@@ -1,5 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { getSession, isAdminSession, onAuthStateChange } from '../services/auth'
+import { isSupabaseConfigured, loadMapData, saveMapData } from '../services/mapData'
 
 const mapImageUrl =
   'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/b996fcf2-a801-4962-8029-0b0799d38e30/d9tsjom-0f83965a-bcd0-448c-a959-081e7f4a1392.jpg/v1/fill/w_5400,h_5930,q_95,strp/star_wars_ulitme_galaxy_map_version_0_01_by_rexxaakobra_d9tsjom-map.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NjI3NyIsInBhdGgiOiIvZi9iOTk2ZmNmMi1hODAxLTQ5NjItODAyOS0wYjA3OTlkMzhlMzAvZDl0c2pvbS0wZjgzOTY1YS1iY2QwLTQ0OGMtYTk1OS0wODFlN2Y0YTEzOTIuanBnIiwid2lkdGgiOiI8PTU3MTYifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.LQHsvRK7SxUae3iQI-o2YB-PNnPyZTCDoAuE_wNPvwI'
@@ -10,100 +12,23 @@ const scale = ref(0.26)
 const position = ref({ x: 0, y: 48 })
 const dragStart = ref(null)
 const overlayDrag = ref(null)
-const isEditorOpen = ref(true)
+const isEditorOpen = ref(false)
 const addPointMode = ref(false)
 const selectedType = ref('label')
-const selectedId = ref('label-core')
+const selectedId = ref('')
+const session = ref(null)
+const isLoadingMapData = ref(false)
+const isSavingMapData = ref(false)
+const mapDataMessage = ref('')
+const mapDataError = ref('')
+const labels = ref([])
+const borders = ref([])
+let unsubscribe = null
 
-const labels = ref([
-  {
-    "id": "label-core",
-    "text": "ISB Space",
-    "x": 2401,
-    "y": 2500,
-    "color": "#ff0000",
-    "size": 12,
-    "opacity": 1
-  }
-])
-
-const borders = ref([
-  {
-    "id": "border-example",
-    "name": "ISB Space",
-    "color": "#e60000",
-    "width": 1,
-    "nodeSize": 4,
-    "points": [
-      {
-        "x": 2506,
-        "y": 2412
-      },
-      {
-        "x": 2474,
-        "y": 2428
-      },
-      {
-        "x": 2433,
-        "y": 2438
-      },
-      {
-        "x": 2377,
-        "y": 2444
-      },
-      {
-        "x": 2361,
-        "y": 2459
-      },
-      {
-        "x": 2350,
-        "y": 2481
-      },
-      {
-        "x": 2338,
-        "y": 2521
-      },
-      {
-        "x": 2370,
-        "y": 2550
-      },
-      {
-        "x": 2438,
-        "y": 2575
-      },
-      {
-        "x": 2509,
-        "y": 2586
-      },
-      {
-        "x": 2580,
-        "y": 2587
-      },
-      {
-        "x": 2602,
-        "y": 2563
-      },
-      {
-        "x": 2590,
-        "y": 2527
-      },
-      {
-        "x": 2590,
-        "y": 2492
-      },
-      {
-        "x": 2588,
-        "y": 2430
-      }
-    ]
-  }
-])
-
+const isAdmin = computed(() => isAdminSession(session.value))
 const selectedLabel = computed(() => labels.value.find((label) => label.id === selectedId.value))
 const selectedBorder = computed(() => borders.value.find((border) => border.id === selectedId.value))
-const overlayData = computed(() => `const labels = ref(${JSON.stringify(labels.value, null, 2)})
-
-const borders = ref(${JSON.stringify(borders.value, null, 2)})`)
+const overlayData = computed(() => JSON.stringify({ labels: labels.value, borders: borders.value }, null, 2))
 
 const mapTransform = computed(() => ({
   transform: `translate(${position.value.x}px, ${position.value.y}px) scale(${scale.value})`,
@@ -176,14 +101,35 @@ function endPan(event) {
 }
 
 function handleMapClick(event) {
-  if (!addPointMode.value || selectedType.value !== 'border' || !selectedBorder.value) {
+  if (!isAdmin.value || !addPointMode.value || selectedType.value !== 'border' || !selectedBorder.value) {
     return
   }
 
   selectedBorder.value.points.push(mapPointFromEvent(event))
 }
 
+function handleOverlayClick(event) {
+  if (isAdmin.value) {
+    event.stopPropagation()
+  }
+}
+
+function selectBorder(event, border) {
+  if (!isAdmin.value) {
+    return
+  }
+
+  event.stopPropagation()
+  selectedType.value = 'border'
+  selectedId.value = border.id
+}
+
 function startLabelDrag(event, label) {
+  if (!isAdmin.value) {
+    return
+  }
+
+  event.stopPropagation()
   event.currentTarget.setPointerCapture(event.pointerId)
   selectedType.value = 'label'
   selectedId.value = label.id
@@ -191,6 +137,11 @@ function startLabelDrag(event, label) {
 }
 
 function startPointDrag(event, border, pointIndex) {
+  if (!isAdmin.value) {
+    return
+  }
+
+  event.stopPropagation()
   event.currentTarget.setPointerCapture(event.pointerId)
   selectedType.value = 'border'
   selectedId.value = border.id
@@ -198,7 +149,7 @@ function startPointDrag(event, border, pointIndex) {
 }
 
 function dragOverlay(event) {
-  if (!overlayDrag.value || overlayDrag.value.pointerId !== event.pointerId) {
+  if (!isAdmin.value || !overlayDrag.value || overlayDrag.value.pointerId !== event.pointerId) {
     return
   }
 
@@ -221,6 +172,10 @@ function dragOverlay(event) {
 }
 
 function addLabel() {
+  if (!isAdmin.value) {
+    return
+  }
+
   const id = `label-${Date.now()}`
   labels.value.push({ id, text: 'New Label', x: 2700, y: 2965, color: '#f8fdff', size: 30, opacity: 1 })
   selectedType.value = 'label'
@@ -228,6 +183,10 @@ function addLabel() {
 }
 
 function addBorder() {
+  if (!isAdmin.value) {
+    return
+  }
+
   const id = `border-${Date.now()}`
   borders.value.push({
     id,
@@ -247,6 +206,10 @@ function addBorder() {
 }
 
 function deleteSelected() {
+  if (!isAdmin.value) {
+    return
+  }
+
   if (selectedLabel.value) {
     labels.value = labels.value.filter((label) => label.id !== selectedId.value)
   }
@@ -255,12 +218,14 @@ function deleteSelected() {
     borders.value = borders.value.filter((border) => border.id !== selectedId.value)
   }
 
-  const nextSelection = labels.value[0] ?? borders.value[0]
-  selectedType.value = labels.value[0] ? 'label' : 'border'
-  selectedId.value = nextSelection?.id ?? ''
+  selectFirstOverlay()
 }
 
 function deleteLastPoint() {
+  if (!isAdmin.value) {
+    return
+  }
+
   if (selectedBorder.value && selectedBorder.value.points.length > 0) {
     selectedBorder.value.points.pop()
   }
@@ -279,9 +244,96 @@ function resetMap() {
   position.value = { x: 0, y: 48 }
 }
 
+function selectFirstOverlay() {
+  const nextSelection = labels.value[0] ?? borders.value[0]
+  selectedType.value = labels.value[0] ? 'label' : 'border'
+  selectedId.value = nextSelection?.id ?? ''
+}
+
 function updateSelectionType() {
+  if (!isAdmin.value) {
+    return
+  }
+
   selectedType.value = labels.value.some((label) => label.id === selectedId.value) ? 'label' : 'border'
 }
+
+async function loadOverlays() {
+  mapDataMessage.value = ''
+  mapDataError.value = ''
+
+  if (!isSupabaseConfigured) {
+    mapDataError.value = 'Supabase environment variables are not configured for this build.'
+    return
+  }
+
+  isLoadingMapData.value = true
+  const { labels: loadedLabels, borders: loadedBorders, error } = await loadMapData()
+  isLoadingMapData.value = false
+
+  if (error) {
+    mapDataError.value = error.message
+    return
+  }
+
+  labels.value = loadedLabels
+  borders.value = loadedBorders
+  selectFirstOverlay()
+  mapDataMessage.value = loadedLabels.length || loadedBorders.length ? 'Map overlays loaded.' : 'No map overlays found.'
+}
+
+async function saveOverlays() {
+  mapDataMessage.value = ''
+  mapDataError.value = ''
+
+  if (!isAdmin.value) {
+    mapDataError.value = 'Only admins can save map overlays.'
+    return
+  }
+
+  if (!isSupabaseConfigured) {
+    mapDataError.value = 'Supabase environment variables are not configured for this build.'
+    return
+  }
+
+  isSavingMapData.value = true
+  const { error } = await saveMapData(labels.value, borders.value)
+  isSavingMapData.value = false
+
+  if (error) {
+    mapDataError.value = error.message
+    return
+  }
+
+  mapDataMessage.value = 'Map overlays saved.'
+}
+
+onMounted(async () => {
+  const { session: activeSession, error } = await getSession()
+
+  if (error) {
+    mapDataError.value = error.message
+  }
+
+  session.value = activeSession
+  await loadOverlays()
+
+  unsubscribe = onAuthStateChange((activeSession) => {
+    session.value = activeSession
+
+    if (!isAdminSession(activeSession)) {
+      isEditorOpen.value = false
+      overlayDrag.value = null
+      addPointMode.value = false
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (unsubscribe) {
+    unsubscribe()
+  }
+})
 </script>
 
 <template>
@@ -317,16 +369,17 @@ function updateSelectionType() {
         <svg class="map-overlay" :viewBox="`0 0 ${mapSize.width} ${mapSize.height}`" aria-hidden="true">
           <g v-for="border in borders" :key="border.id">
             <polygon
-              class="map-border-fill map-overlay-hotspot"
-              :class="{ 'map-overlay-selected': selectedId === border.id }"
+              class="map-border-fill"
+              :class="{ 'map-overlay-hotspot': isAdmin, 'map-overlay-selected': isAdmin && selectedId === border.id }"
               :points="border.points.map((point) => `${point.x},${point.y}`).join(' ')"
               :fill="border.color"
               :stroke="border.color"
-              :stroke-width="selectedId === border.id ? border.width + 6 : border.width"
-              @pointerdown.stop="selectedType = 'border'; selectedId = border.id"
-              @click.stop
+              :stroke-width="isAdmin && selectedId === border.id ? border.width + 6 : border.width"
+              :style="{ pointerEvents: isAdmin ? 'auto' : 'none' }"
+              @pointerdown="selectBorder($event, border)"
+              @click="handleOverlayClick"
             />
-            <template v-if="selectedId === border.id">
+            <template v-if="isAdmin && selectedId === border.id">
               <circle
                 v-for="(point, pointIndex) in border.points"
                 :key="`${border.id}-${pointIndex}`"
@@ -334,8 +387,9 @@ function updateSelectionType() {
                 :cx="point.x"
                 :cy="point.y"
                 :r="border.nodeSize"
-                @pointerdown.stop="startPointDrag($event, border, pointIndex)"
-                @click.stop
+                :style="{ pointerEvents: isAdmin ? 'auto' : 'none' }"
+                @pointerdown="startPointDrag($event, border, pointIndex)"
+                @click="handleOverlayClick"
               />
             </template>
           </g>
@@ -345,29 +399,39 @@ function updateSelectionType() {
           v-for="label in labels"
           :key="label.id"
           type="button"
-          class="map-label map-overlay-hotspot"
-          :class="{ 'map-overlay-selected': selectedId === label.id }"
-          :style="{ left: `${label.x}px`, top: `${label.y}px`, color: label.color, fontSize: `${label.size}px`, opacity: label.opacity ?? 1 }"
-          @pointerdown.stop="startLabelDrag($event, label)"
-          @click.stop
+          class="map-label"
+          :class="{ 'map-overlay-hotspot': isAdmin, 'map-overlay-selected': isAdmin && selectedId === label.id }"
+          :style="{ left: `${label.x}px`, top: `${label.y}px`, color: label.color, fontSize: `${label.size}px`, opacity: label.opacity ?? 1, pointerEvents: isAdmin ? 'auto' : 'none' }"
+          :tabindex="isAdmin ? 0 : -1"
+          @pointerdown="startLabelDrag($event, label)"
+          @click="handleOverlayClick"
         >
           {{ label.text }}
         </button>
       </div>
     </section>
 
-    <aside v-if="isEditorOpen" class="map-editor">
+    <aside v-if="isAdmin && isEditorOpen" class="map-editor">
       <div class="map-editor-header">
         <h2>Map Overlays</h2>
         <button type="button" aria-label="Close overlay editor" @click="isEditorOpen = false">x</button>
       </div>
 
       <div class="map-editor-actions">
-        <button type="button" @click="addLabel">Add Label</button>
-        <button type="button" @click="addBorder">Add Border</button>
+        <button type="button" :disabled="isLoadingMapData || isSavingMapData" @click="addLabel">Add Label</button>
+        <button type="button" :disabled="isLoadingMapData || isSavingMapData" @click="addBorder">Add Border</button>
+        <button type="button" :disabled="isLoadingMapData || isSavingMapData" @click="saveOverlays">
+          {{ isSavingMapData ? 'Saving...' : 'Save' }}
+        </button>
+        <button type="button" :disabled="isLoadingMapData || isSavingMapData" @click="loadOverlays">
+          {{ isLoadingMapData ? 'Loading...' : 'Reload' }}
+        </button>
       </div>
 
-      <label>
+      <p v-if="mapDataError" class="map-editor-message map-editor-message-error">{{ mapDataError }}</p>
+      <p v-else-if="mapDataMessage" class="map-editor-message">{{ mapDataMessage }}</p>
+
+      <label v-if="labels.length || borders.length">
         <span>Selection</span>
         <select v-model="selectedId" @change="updateSelectionType">
           <optgroup label="Labels">
@@ -378,6 +442,7 @@ function updateSelectionType() {
           </optgroup>
         </select>
       </label>
+      <p v-else class="map-editor-empty">No overlays loaded yet.</p>
 
       <div v-if="selectedLabel" class="map-editor-fields">
         <label>
@@ -425,12 +490,12 @@ function updateSelectionType() {
       <button class="map-editor-delete" type="button" @click="deleteSelected">Delete Selected</button>
 
       <label>
-        <span>Export To MapView.vue</span>
+        <span>Current Overlay JSON</span>
         <textarea :value="overlayData" readonly rows="8"></textarea>
       </label>
     </aside>
 
-    <button v-else class="map-editor-toggle-button" type="button" @click="isEditorOpen = true">Overlays</button>
+    <button v-else-if="isAdmin" class="map-editor-toggle-button" type="button" @click="isEditorOpen = true">Overlays</button>
 
     <div class="map-controls" aria-label="Map controls">
       <button type="button" aria-label="Zoom out" @click="zoomOut">-</button>
