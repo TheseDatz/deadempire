@@ -3,7 +3,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { loadAllCharacters } from '../data/characters'
 import { getSession } from '../services/auth'
-import { canManageCharacterSheet, deleteCharacterSheet, saveCharacterSheet } from '../services/characterSheets'
+import {
+  canManageCharacterSheet,
+  deleteCharacterSheet,
+  saveCharacterSheet,
+  updateCharacterSheetPlayerVisibility,
+} from '../services/characterSheets'
 
 const props = defineProps({
   characterName: {
@@ -30,6 +35,7 @@ const canSaveCharacters = ref(false)
 const canViewBackstory = ref(false)
 const isSaving = ref(false)
 const isDeleting = ref(false)
+const isUpdatingVisibility = ref(false)
 const saveMessage = ref('')
 const saveErrorMessage = ref('')
 const isCombatRolling = ref(false)
@@ -43,6 +49,10 @@ const isForceSensitive = computed(() => {
   return String(sheet.value.force?.forceSensitive ?? '').trim().toLowerCase() === 'yes'
 })
 const characterPhotoAlt = computed(() => sheet.value.name || 'Character illustration')
+const isImportantNpc = computed(() => sheet.value._category === 'npc')
+const isNpcVisibleToPlayers = computed(() => Boolean(sheet.value._isPlayerVisible))
+const isLimitedImportantNpcView = computed(() => isImportantNpc.value && !canSaveCharacters.value)
+const canViewBackground = computed(() => canViewBackstory.value || isLimitedImportantNpcView.value)
 const healthClass = computed(() => {
   const normalizedHealth = String(health.value || '').trim().toLowerCase().replace(/\s+/g, '-')
   return normalizedHealth ? `character-sheet-health-${normalizedHealth}` : ''
@@ -269,6 +279,7 @@ function buildCharacterJson() {
   delete exportData.forceSummary
   delete exportData.specialAbilitiesText
   delete exportData._category
+  delete exportData._isPlayerVisible
   delete exportData._slug
   return exportData
 }
@@ -304,6 +315,46 @@ async function saveCharacterToSupabase() {
   }
 
   isSaving.value = false
+}
+
+async function toggleNpcPlayerVisibility() {
+  saveMessage.value = ''
+  saveErrorMessage.value = ''
+
+  const nextVisibility = !isNpcVisibleToPlayers.value
+  const visibilityLabel = nextVisibility ? 'show this important NPC to players' : 'hide this important NPC from players'
+
+  if (!window.confirm(`Are you sure you want to ${visibilityLabel}?`)) {
+    return
+  }
+
+  isUpdatingVisibility.value = true
+
+  try {
+    const { character: updatedCharacter, error } = await updateCharacterSheetPlayerVisibility(sheet.value._slug, nextVisibility)
+
+    if (error) {
+      saveErrorMessage.value = error.message
+    } else {
+      sheet.value._isPlayerVisible = Boolean(updatedCharacter?._isPlayerVisible)
+      const index = allCharacters.value.findIndex((entry) => entry._slug === sheet.value._slug)
+
+      if (index !== -1) {
+        allCharacters.value[index] = {
+          ...allCharacters.value[index],
+          _isPlayerVisible: sheet.value._isPlayerVisible,
+        }
+      }
+
+      saveMessage.value = sheet.value._isPlayerVisible
+        ? 'Important NPC is now shown to players.'
+        : 'Important NPC is now hidden from players.'
+    }
+  } catch (error) {
+    saveErrorMessage.value = error.message
+  } finally {
+    isUpdatingVisibility.value = false
+  }
 }
 
 async function deleteCharacterFromSupabase() {
@@ -587,6 +638,19 @@ function increaseCombatActions() {
       <header class="sheet-title">
         <p class="text-sm uppercase tracking-[0.32em] text-cyan-100/80">Dead Empire</p>
         <h1 class="font-serif text-5xl font-bold text-white">{{ sheet.name || 'Unnamed Character' }}</h1>
+        <div v-if="canSaveCharacters && isImportantNpc" class="mt-4 flex flex-col items-center gap-2">
+          <p class="text-sm font-bold uppercase tracking-[0.22em]" :class="isNpcVisibleToPlayers ? 'text-cyan-100' : 'text-red-200'">
+            {{ isNpcVisibleToPlayers ? 'Shown to players' : 'Hidden from players' }}
+          </p>
+          <button
+            class="sheet-add-button"
+            type="button"
+            :disabled="isUpdatingVisibility || isSaving || isDeleting"
+            @click="toggleNpcPlayerVisibility"
+          >
+            {{ isNpcVisibleToPlayers ? 'Hide from Players' : 'Show to Players' }}
+          </button>
+        </div>
       </header>
 
       <section class="sheet-grid mt-8">
@@ -659,7 +723,7 @@ function increaseCombatActions() {
           </section>
         </aside>
 
-        <section class="sheet-panel sheet-panel-full">
+        <section v-if="!isLimitedImportantNpcView" class="sheet-panel sheet-panel-full">
           <div class="sheet-heading-row">
             <h2 class="sheet-heading">Attributes & Skills</h2>
             <div class="combat-roll-controls">
@@ -730,7 +794,7 @@ function increaseCombatActions() {
           </div>
         </section>
 
-        <section class="sheet-panel">
+        <section v-if="!isLimitedImportantNpcView" class="sheet-panel">
           <div class="sheet-section-header">
             <h2 class="sheet-heading">Weapons</h2>
             <button class="sheet-add-button" type="button" @click="addWeapon">Add</button>
@@ -762,7 +826,7 @@ function increaseCombatActions() {
           </div>
         </section>
 
-        <section class="sheet-panel">
+        <section v-if="!isLimitedImportantNpcView" class="sheet-panel">
           <div class="sheet-section-header">
             <h2 class="sheet-heading">Armor</h2>
             <button class="sheet-add-button" type="button" @click="addArmor">Add</button>
@@ -794,7 +858,7 @@ function increaseCombatActions() {
           </div>
         </section>
 
-        <section class="sheet-panel">
+        <section v-if="!isLimitedImportantNpcView" class="sheet-panel">
           <div class="sheet-section-header">
             <h2 class="sheet-heading">Equipment</h2>
             <button class="sheet-add-button" type="button" @click="addEquipment">Add</button>
@@ -828,7 +892,7 @@ function increaseCombatActions() {
           </div>
         </section>
 
-        <section class="sheet-panel">
+        <section v-if="!isLimitedImportantNpcView" class="sheet-panel">
           <h2 class="sheet-heading">Funds & Currency</h2>
           <div class="currency-grid mt-4">
             <label class="sheet-field">
@@ -855,7 +919,7 @@ function increaseCombatActions() {
           </p>
         </section>
 
-        <section class="sheet-panel">
+        <section v-if="!isLimitedImportantNpcView" class="sheet-panel">
           <h2 class="sheet-heading">Special Abilities</h2>
           <textarea
             v-model="sheet.specialAbilitiesText"
@@ -863,7 +927,7 @@ function increaseCombatActions() {
           />
         </section>
 
-        <section class="sheet-panel">
+        <section v-if="!isLimitedImportantNpcView" class="sheet-panel">
           <h2 class="sheet-heading">The Force</h2>
           <div class="mt-4 grid grid-cols-3 gap-3">
             <label class="sheet-field">
@@ -911,7 +975,7 @@ function increaseCombatActions() {
           </div>
         </section>
 
-        <section v-if="isForceSensitive" class="sheet-panel sheet-panel-full">
+        <section v-if="isForceSensitive && !isLimitedImportantNpcView" class="sheet-panel sheet-panel-full">
           <div class="sheet-section-header">
             <h2 class="sheet-heading">Force Powers</h2>
             <button class="sheet-add-button" type="button" @click="addForcePower">Add</button>
@@ -936,7 +1000,7 @@ function increaseCombatActions() {
           </div>
         </section>
 
-        <section class="sheet-panel sheet-panel-full">
+        <section v-if="!isLimitedImportantNpcView" class="sheet-panel sheet-panel-full">
           <div class="sheet-section-header">
             <h2 class="sheet-heading">Advantages &amp; Disadvantages</h2>
             <button class="sheet-add-button" type="button" @click="addAdvantage">Add</button>
@@ -963,7 +1027,12 @@ function increaseCombatActions() {
           </div>
         </section>
 
-        <section v-if="canViewBackstory" class="sheet-panel sheet-panel-full">
+        <section v-if="isImportantNpc" class="sheet-panel sheet-panel-full">
+          <h2 class="sheet-heading">Notes</h2>
+          <textarea v-model="sheet.notes" class="mt-4 min-h-36" />
+        </section>
+
+        <section v-if="canViewBackground" class="sheet-panel sheet-panel-full">
           <h2 class="sheet-heading">Background</h2>
           <textarea v-model="sheet.background" class="mt-4 min-h-36" />
         </section>
@@ -988,7 +1057,12 @@ function increaseCombatActions() {
         >
           Delete
         </button>
-        <button class="sheet-export-button" type="button" @click="exportCharacterJson">
+        <button
+          v-if="!isLimitedImportantNpcView"
+          class="sheet-export-button"
+          type="button"
+          @click="exportCharacterJson"
+        >
           Export to JSON
         </button>
       </div>

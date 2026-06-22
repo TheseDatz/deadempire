@@ -2,7 +2,7 @@ import { isSupabaseConfigured, supabase } from './supabaseClient'
 
 export { isSupabaseConfigured }
 
-const SHEET_COLUMNS = 'slug, category, sort_order, sheet, updated_at'
+const SHEET_COLUMNS = 'slug, category, sort_order, is_player_visible, sheet, updated_at'
 export const MAX_PLAYER_CHARACTER_SHEETS = 2
 
 const DEFAULT_ATTRIBUTES = [
@@ -83,6 +83,7 @@ function rowToCharacter(row) {
     id: row.sheet?.id || row.slug,
     _slug: row.slug,
     _category: row.category,
+    _isPlayerVisible: Boolean(row.is_player_visible),
   }
 }
 
@@ -166,6 +167,22 @@ export async function saveCharacterSheet(sheet, slug, category = 'player') {
   const { data, error } = await supabase
     .from('character_sheets')
     .upsert(row, { onConflict: 'slug' })
+    .select(SHEET_COLUMNS)
+    .single()
+
+  return { character: data ? rowToCharacter(data) : null, error }
+}
+
+export async function updateCharacterSheetPlayerVisibility(slug, isPlayerVisible) {
+  if (!supabase) {
+    return { character: null, error: new Error('Supabase is not configured.') }
+  }
+
+  const { data, error } = await supabase
+    .from('character_sheets')
+    .update({ is_player_visible: isPlayerVisible })
+    .eq('slug', slug)
+    .eq('category', 'npc')
     .select(SHEET_COLUMNS)
     .single()
 

@@ -1,7 +1,7 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getSession } from '../services/auth'
+import { getSession, isAdminSession } from '../services/auth'
 import {
   MAX_PLAYER_CHARACTER_SHEETS,
   getOwnedCharacterSheetCount,
@@ -76,9 +76,15 @@ const template = reactive({
 })
 
 const router = useRouter()
+const isAdmin = ref(false)
 const isSubmitting = ref(false)
 const submitMessage = ref('')
 const submitErrorMessage = ref('')
+
+onMounted(async () => {
+  const { session } = await getSession()
+  isAdmin.value = isAdminSession(session)
+})
 
 const baseAttributePips = computed(() => diceToPips(template.attributeDice))
 const advantageModifierPips = computed(() => {
@@ -400,15 +406,20 @@ function buildCharacterSheet(slug) {
   }
 }
 
-async function submitCharacter() {
+async function submitCharacter(category = 'player') {
   submitMessage.value = ''
   submitErrorMessage.value = ''
 
-  if (!window.confirm('Submit this character and create a new character sheet?')) {
+  const isImportantNpc = category === 'npc'
+  const confirmMessage = isImportantNpc
+    ? 'Submit this character and create a new important NPC sheet?'
+    : 'Submit this character and create a new character sheet?'
+
+  if (!window.confirm(confirmMessage)) {
     return
   }
 
-  if (!allSectionsComplete.value) {
+  if (!isImportantNpc && !allSectionsComplete.value) {
     submitErrorMessage.value = 'Please complete every required section before submitting.'
     return
   }
@@ -434,22 +445,30 @@ async function submitCharacter() {
     return
   }
 
-  const { count, error: countError } = await getOwnedCharacterSheetCount()
-
-  if (countError) {
-    submitErrorMessage.value = countError.message
+  if (isImportantNpc && !isAdminSession(session)) {
+    submitErrorMessage.value = 'Only an admin can submit important NPCs.'
     isSubmitting.value = false
     return
   }
 
-  if (count >= MAX_PLAYER_CHARACTER_SHEETS) {
-    submitErrorMessage.value = `Each account can have up to ${MAX_PLAYER_CHARACTER_SHEETS} character sheets.`
-    isSubmitting.value = false
-    return
+  if (!isImportantNpc) {
+    const { count, error: countError } = await getOwnedCharacterSheetCount()
+
+    if (countError) {
+      submitErrorMessage.value = countError.message
+      isSubmitting.value = false
+      return
+    }
+
+    if (count >= MAX_PLAYER_CHARACTER_SHEETS) {
+      submitErrorMessage.value = `Each account can have up to ${MAX_PLAYER_CHARACTER_SHEETS} character sheets.`
+      isSubmitting.value = false
+      return
+    }
   }
 
   const slug = crypto.randomUUID()
-  const { character, error } = await saveCharacterSheet(buildCharacterSheet(slug), slug, 'player')
+  const { character, error } = await saveCharacterSheet(buildCharacterSheet(slug), slug, category)
 
   if (error) {
     submitErrorMessage.value = error.message
@@ -457,7 +476,7 @@ async function submitCharacter() {
     return
   }
 
-  submitMessage.value = 'Character submitted.'
+  submitMessage.value = isImportantNpc ? 'Important NPC submitted.' : 'Character submitted.'
   isSubmitting.value = false
   router.push(`/playercharacter/${character?._slug || slug}`)
 }
@@ -1166,14 +1185,23 @@ async function submitCharacter() {
         </article>
       </section>
 
-      <div class="mt-10 flex flex-wrap justify-center gap-3">
+      <div class="mt-10 flex flex-col items-center gap-3">
         <button
           class="sheet-export-button"
           type="button"
           :disabled="isSubmitting"
-          @click="submitCharacter"
+          @click="submitCharacter('player')"
         >
           {{ isSubmitting ? 'Submitting...' : 'Submit Character' }}
+        </button>
+        <button
+          v-if="isAdmin"
+          class="sheet-export-button"
+          type="button"
+          :disabled="isSubmitting"
+          @click="submitCharacter('npc')"
+        >
+          Important NPC
         </button>
       </div>
 

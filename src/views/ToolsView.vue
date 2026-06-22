@@ -2,6 +2,9 @@
 const tools = [
   { label: 'Combat', to: '/combat' },
   { label: 'Inspiration', to: '/Inspiration' },
+  { label: 'Bestiary', to: '/bestiary' },
+  { label: 'Character Wizard', to: '/character-wizard' },
+  { label: 'Roll Log', to: '/roll-log' },
 ]
 </script>
 
@@ -12,7 +15,13 @@ const tools = [
       <h1 class="mt-2 font-serif text-5xl font-bold text-[#4fc3ff]">Tools</h1>
 
       <div class="tools-grid mt-10">
-        <RouterLink v-for="tool in tools" :key="tool.to" class="tool-card" :to="tool.to">
+        <RouterLink
+          v-for="tool in tools"
+          :key="tool.to"
+          class="tool-card"
+          :class="{ 'tool-card-small': tool.label.length > 12 }"
+          :to="tool.to"
+        >
           {{ tool.label }}
         </RouterLink>
       </div>

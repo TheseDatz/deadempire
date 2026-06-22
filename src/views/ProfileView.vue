@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getSession,
+  isAdminSession,
   isSupabaseConfigured,
   onAuthStateChange,
   signInWithUsername,
@@ -34,6 +35,7 @@ const displayName = computed(() => userEmail.value.replace(/@dead-empire\.local$
 const needsInitialPasswordChange = computed(() => {
   return Boolean(session.value && !session.value.user?.user_metadata?.password_changed_at)
 })
+const isAdmin = computed(() => isAdminSession(session.value))
 const canCreateCharacter = computed(() => characterSheetCount.value < MAX_PLAYER_CHARACTER_SHEETS)
 const redirectPath = computed(() => {
   const redirect = route.query.redirect
@@ -209,6 +211,7 @@ onUnmounted(() => {
             >
               Create Character
             </button>
+            <RouterLink v-if="isAdmin" class="profile-button" to="/admin">Admin</RouterLink>
             <button class="profile-button profile-button-secondary" type="button" :disabled="isSubmitting" @click="handleSignOut">
               Sign Out
             </button>

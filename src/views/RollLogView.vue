@@ -10,6 +10,7 @@ const rolls = ref([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 const isLive = ref(false)
+const rollLogLimit = 10
 let unsubscribe = null
 
 const statusText = computed(() => {
@@ -55,7 +56,7 @@ function formatWildStatus(value) {
 }
 
 function addRoll(roll) {
-  rolls.value = [roll, ...rolls.value.filter((existing) => existing.id !== roll.id)].slice(0, 25)
+  rolls.value = [roll, ...rolls.value.filter((existing) => existing.id !== roll.id)].slice(0, rollLogLimit)
 }
 
 onMounted(async () => {
@@ -65,7 +66,7 @@ onMounted(async () => {
     return
   }
 
-  const { data, error } = await getLatestDiceRolls()
+  const { data, error } = await getLatestDiceRolls(rollLogLimit)
 
   if (error) {
     errorMessage.value = error.message

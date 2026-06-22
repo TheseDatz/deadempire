@@ -1850,13 +1850,17 @@
 
   .tools-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
   }
 
   .tool-card {
+    align-items: center;
     border: 1px solid rgba(79, 195, 255, 0.34);
     background: rgba(9, 16, 24, 0.68);
+    display: flex;
+    justify-content: center;
+    min-height: 128px;
     padding: 28px;
     color: #d9f5ff;
     font-family: Georgia, 'Times New Roman', serif;
@@ -1866,6 +1870,7 @@
     text-align: center;
     text-decoration: none;
     text-transform: uppercase;
+    word-break: normal;
     box-shadow:
       inset 0 0 26px rgba(79, 195, 255, 0.04),
       0 10px 28px rgba(0, 0, 0, 0.22);
@@ -1873,6 +1878,10 @@
       border-color 160ms ease,
       box-shadow 160ms ease,
       transform 160ms ease;
+  }
+
+  .tool-card-small {
+    font-size: 22px;
   }
 
   .tool-card:hover {
