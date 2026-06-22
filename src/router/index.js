@@ -13,6 +13,7 @@ import MapView from '../views/MapView.vue'
 import PlaceholderView from '../views/PlaceholderView.vue'
 import PlanetsView from '../views/PlanetsView.vue'
 import PlayerCharacterView from '../views/PlayerCharacterView.vue'
+import PrimerView from '../views/PrimerView.vue'
 import RollLogView from '../views/RollLogView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import ForbiddenView from '../views/ForbiddenView.vue'
@@ -77,6 +78,11 @@ const router = createRouter({
       name: 'information',
       component: PlaceholderView,
       props: { title: 'Information' },
+    },
+    {
+      path: '/Primer',
+      name: 'primer',
+      component: PrimerView,
     },
     {
       path: '/Inspiration',
