@@ -1,13 +1,37 @@
 <script setup>
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import HeroActions from '../components/HeroActions.vue'
 
 const backgroundUrl = `${import.meta.env.BASE_URL}bg.png`
+const aurebeshGlyphs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const randomizedLabelLength = 'Information'.length
+const primerLabelIntervalMs = 520
+const primerLabel = ref('INFORMATION')
+let primerLabelInterval
 
-const heroActions = [
-  { label: 'Characters', to: '/Characters' },
-  { label: 'Information', to: '/Information', primary: true },
-  { label: 'Tools', to: '/tools' },
-]
+const randomAurebeshLabel = () => {
+  return Array.from(
+    { length: randomizedLabelLength },
+    () => aurebeshGlyphs[Math.floor(Math.random() * aurebeshGlyphs.length)],
+  ).join('')
+}
+
+const heroActions = computed(() => [
+  { id: 'characters', label: 'Characters', to: '/Characters' },
+  { id: 'primer', label: primerLabel.value, to: '/Primer', ariaLabel: 'Primer', class: 'hero-action-aurebesh' },
+  { id: 'tools', label: 'Tools', to: '/tools' },
+])
+
+onMounted(() => {
+  primerLabel.value = randomAurebeshLabel()
+  primerLabelInterval = window.setInterval(() => {
+    primerLabel.value = randomAurebeshLabel()
+  }, primerLabelIntervalMs)
+})
+
+onBeforeUnmount(() => {
+  window.clearInterval(primerLabelInterval)
+})
 </script>
 
 <template>

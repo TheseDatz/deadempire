@@ -1,5 +1,11 @@
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Naboo AF Aurebesh';
+  src: url('/fonts/naboo-af-aurebesh/NabooAfAurebeshRegular-OGqyp.otf') format('opentype');
+  font-display: swap;
+}
+
 @layer base {
   :root {
     font-family: Arial, Helvetica, sans-serif;
@@ -129,6 +135,9 @@
   }
 
   .hero-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-width: 210px;
     border: 1px solid rgba(79, 195, 255, 0.72);
     background: rgba(10, 12, 18, 0.62);
@@ -148,6 +157,14 @@
       transform 180ms ease;
   }
 
+  .hero-action-label {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+
   .hero-action:hover {
     border-color: #9be7ff;
     background: rgba(26, 28, 35, 0.78);
@@ -157,6 +174,133 @@
   .hero-action-primary {
     border-color: rgba(155, 231, 255, 0.92);
     background: linear-gradient(180deg, rgba(79, 195, 255, 0.95), rgba(20, 151, 255, 0.96));
+  }
+
+  .hero-action-aurebesh {
+    width: 270px;
+    max-width: calc(100vw - 48px);
+    font-family: 'Naboo AF Aurebesh', Arial, Helvetica, sans-serif;
+  }
+
+  .hero-action-aurebesh .hero-action-label {
+    width: 11ch;
+  }
+
+  .primer-crawl-section {
+    display: grid;
+    gap: 34px;
+  }
+
+  .primer-gold-divider {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 242, 167, 0.92), transparent);
+    box-shadow:
+      0 0 8px rgba(255, 242, 167, 0.82),
+      0 0 22px rgba(255, 196, 64, 0.38);
+  }
+
+  .primer-gold-divider-lower {
+    margin-top: 28px;
+  }
+
+  .primer-crawl-viewport {
+    display: grid;
+    place-items: start center;
+    perspective: 900px;
+  }
+
+  .primer-crawl {
+    max-width: 680px;
+    color: #fff2a7;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: clamp(1rem, 1.8vw, 1.8rem);
+    font-weight: 900;
+    line-height: 1.45;
+    text-align: justify;
+    text-align-last: center;
+    text-shadow:
+      0 0 6px rgba(255, 255, 255, 0.66),
+      0 0 18px rgba(255, 242, 167, 0.56),
+      0 0 36px rgba(255, 196, 64, 0.34);
+    transform: rotateX(18deg);
+    transform-origin: 50% 0;
+  }
+
+  .primer-crawl p + p {
+    margin-top: 1.1em;
+  }
+
+  .primer-page .reference-card p + p {
+    margin-top: 18px;
+    border-top: 1px solid rgba(255, 242, 167, 0.24);
+    padding-top: 18px;
+  }
+
+  .primer-page .reference-card a {
+    color: #fff2a7;
+    font-weight: 900;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 242, 167, 0.48);
+    text-underline-offset: 3px;
+  }
+
+  .primer-page .reference-card a:hover {
+    color: #fff8c9;
+    text-decoration-color: #fff8c9;
+  }
+
+  .primer-timeline {
+    display: grid;
+    gap: 20px;
+  }
+
+  .primer-timeline-years {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .primer-timeline-years button {
+    border: 1px solid rgba(255, 242, 167, 0.42);
+    background: rgba(255, 242, 167, 0.08);
+    padding: 10px 14px;
+    color: rgba(255, 248, 201, 0.78);
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition:
+      border-color 160ms ease,
+      background 160ms ease,
+      box-shadow 160ms ease,
+      color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .primer-timeline-years button:hover,
+  .primer-timeline-years .primer-timeline-year-active {
+    border-color: rgba(255, 242, 167, 0.86);
+    background: linear-gradient(180deg, rgba(255, 242, 167, 0.18), rgba(255, 196, 64, 0.1));
+    color: #fff8c9;
+    box-shadow:
+      inset 0 0 18px rgba(255, 242, 167, 0.08),
+      0 0 18px rgba(255, 196, 64, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .primer-timeline-events {
+    display: grid;
+    gap: 14px;
+  }
+
+  .primer-timeline-year-label {
+    margin-top: 0 !important;
+    color: #fff2a7 !important;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
   }
 
   .site-footer {
@@ -408,6 +552,7 @@
   .space-combat-page,
   .game-log-page,
   .roll-log-page,
+  .primer-page,
   .profile-page,
   .admin-page,
   .error-page {
