@@ -19,6 +19,7 @@ import ProfileView from '../views/ProfileView.vue'
 import ForbiddenView from '../views/ForbiddenView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import RulesView from '../views/RulesView.vue'
+import SpaceCombatView from '../views/SpaceCombatView.vue'
 import ToolsView from '../views/ToolsView.vue'
 import { getSession, isAdminSession } from '../services/auth'
 
@@ -55,6 +56,11 @@ const router = createRouter({
       path: '/combat',
       name: 'combat',
       component: CombatView,
+    },
+    {
+      path: '/space-combat',
+      name: 'space-combat',
+      component: SpaceCombatView,
     },
     {
       path: '/tools',

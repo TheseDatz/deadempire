@@ -28,6 +28,12 @@ const bulletRest = (bullet) => {
     <p :class="{ 'reference-summary-alert': reference.summaryAlert }">{{ reference.summary }}</p>
     <p v-if="reference.goldNote" class="reference-gold-note">{{ reference.goldNote }}</p>
 
+    <div v-if="reference.links" class="reference-links">
+      <RouterLink v-for="link in reference.links" :key="link.to" :to="link.to">
+        {{ link.label }}
+      </RouterLink>
+    </div>
+
     <ul v-if="reference.bullets" class="reference-bullets">
       <li v-for="bullet in reference.bullets" :key="bullet">
         <template v-if="bulletLead(bullet)">

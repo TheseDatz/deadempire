@@ -1,6 +1,7 @@
 <script setup>
 const tools = [
   { label: 'Combat', to: '/combat' },
+  { label: 'Space Combat', to: '/space-combat' },
   { label: 'Inspiration', to: '/Inspiration' },
   { label: 'Bestiary', to: '/bestiary' },
   { label: 'Character Wizard', to: '/character-wizard' },

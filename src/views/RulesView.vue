@@ -1025,6 +1025,13 @@ const starshipReferences = [
 
 const spaceCombatReferences = [
   {
+    title: 'Additional Rules for This Campaign',
+    alert: true,
+    summary:
+      'Dead Empire uses a simplified space combat system. Use the instructions panel on the Space Combat page for the campaign rules. The rest of this tab mainly summarizes standard REUP space combat for reference.',
+    links: [{ label: 'Open Space Combat Page', to: '/space-combat' }],
+  },
+  {
     title: 'Running Space Combat',
     summary:
       'Space battles should feel fast, cinematic, and dangerous. The goal is exciting Star Wars action, not measuring every turn with perfect precision.',
