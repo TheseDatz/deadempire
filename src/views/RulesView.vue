@@ -138,6 +138,11 @@ const playerHandoutReferences = [
           'Dark Side Points in this campaign do not follow the standard REUP rules. Instead, the gamemaster uses them to create complications, give enemies advantages, and generally keep things more interesting. This avoids punishing characters simply for acting immorally.',
       },
       {
+        title: 'Languages',
+        body:
+          'Languages in this campaign are tracked as either proficient or novice. Proficient means you can communicate normally in that language. Novice means you can get by, but the gamemaster may apply mechanical penalties or create narrative misunderstandings when nuance, speed, slang, technical terms, or tense social situations matter. When creating a character, players may choose two starting languages. During advancement, learning a new language at novice costs 1 Character Point, and improving a novice language to proficient costs 1 more Character Point. Learning still takes several days in the fiction and may require a teacher or holotape, which may or may not cost credits.',
+      },
+      {
         title: 'Lines & Veils',
         body:
           'Players are expected to abide by our shared lines and veils. Lines are content boundaries that do not appear in the game. Veils are subjects that may exist in the story, but are handled off-screen, briefly, or without explicit detail.',

@@ -87,7 +87,11 @@ function createCombatant(character = {}) {
     tempDifficulty: '',
     actions: 1,
     health: character.health ?? 'Healthy',
+    relativePosition: '',
     knockedProne: false,
+    isNpc: false,
+    activeStuns: 0,
+    damage: '',
     side: 'blue',
   }
 }

@@ -33,6 +33,7 @@ const template = reactive({
   playerName: '',
   type: '',
   species: '',
+  isDroid: false,
   attributeDice: 12,
   attributes: Object.fromEntries(
     ATTRIBUTE_NAMES.map((name) => [
@@ -46,6 +47,7 @@ const template = reactive({
   move: '',
   hasNoSpecialAbilities: false,
   specialAbilities: '',
+  languages: '',
   forceSensitive: false,
   forceSkills: Object.fromEntries(
     FORCE_SKILLS.map((name) => [
@@ -203,6 +205,7 @@ const allSectionsComplete = computed(() => {
     additionalInfoComplete.value
   )
 })
+const skipsCompletionChecks = computed(() => template.isDroid)
 
 function diceToPips(dice) {
   return Number(dice || 0) * 3
@@ -330,6 +333,7 @@ function buildCharacterSheet(slug) {
     tagline: template.quote.trim(),
     type: template.type.trim(),
     species: template.species.trim(),
+    isDroid: template.isDroid,
     homeworld: template.homeworld.trim(),
     gender: template.gender.trim(),
     age: template.age.trim(),
@@ -341,6 +345,7 @@ function buildCharacterSheet(slug) {
     appearance: template.appearance.trim(),
     personality: template.personality.trim(),
     quote: template.quote.trim(),
+    languages: template.languages.trim(),
     attributes: ATTRIBUTE_NAMES.map((name) => ({
       name,
       dice: formatPips(attributePips(name)),
@@ -419,7 +424,7 @@ async function submitCharacter(category = 'player') {
     return
   }
 
-  if (!isImportantNpc && !allSectionsComplete.value) {
+  if (!isImportantNpc && !skipsCompletionChecks.value && !allSectionsComplete.value) {
     submitErrorMessage.value = 'Please complete every required section before submitting.'
     return
   }
@@ -557,6 +562,20 @@ async function submitCharacter(category = 'player') {
                 the REUP species are found on page 279. You may also play as droids; rancorpit has a large fan-compiled resource
                 <a href="https://www.rancorpit.com/forums/downloads/Rancor%20Pit%20Stat%20Compilations/Droids_Stats.pdf" target="_blank" rel="noreferrer">here</a>.
               </p>
+            </section>
+
+            <section class="wizard-step">
+              <fieldset class="wizard-radio-toggle">
+                <legend>Are you playing a droid?</legend>
+                <label>
+                  <input v-model="template.isDroid" type="radio" :value="true" />
+                  <span>Yes</span>
+                </label>
+                <label>
+                  <input v-model="template.isDroid" type="radio" :value="false" />
+                  <span>No</span>
+                </label>
+              </fieldset>
             </section>
           </div>
         </article>
@@ -754,6 +773,16 @@ async function submitCharacter(category = 'player') {
                 <input v-model="template.hasNoSpecialAbilities" type="checkbox" />
                 <span>This character has no species special abilities.</span>
               </label>
+
+              <label class="wizard-field">
+                <span>Languages</span>
+                <textarea v-model="template.languages" rows="4" />
+              </label>
+              <p class="wizard-muted">
+                You may choose up to two starting languages as (proficient). For a list of languages please refer to this
+                <a href="https://starwars.fandom.com/wiki/Language/Legends" target="_blank" rel="noreferrer">page</a>.
+                Most players should take 'Basic' unless they wish to have issues communicating.
+              </p>
             </section>
           </div>
         </article>

@@ -1588,7 +1588,7 @@
 
   .combatant-row {
     display: grid;
-    grid-template-columns: 72px minmax(140px, 0.72fr) 96px 120px 72px 160px minmax(16px, 1fr) 54px 22px;
+    grid-template-columns: 72px minmax(140px, 0.72fr) 96px 120px 72px 160px 84px minmax(16px, 1fr) 54px 22px;
     gap: 10px;
     align-items: end;
     border: 1px solid rgba(79, 195, 255, 0.34);
@@ -1607,6 +1607,10 @@
   }
 
   .combat-actions input {
+    padding-inline: 7px;
+  }
+
+  .combat-relative-position input {
     padding-inline: 7px;
   }
 
@@ -1664,9 +1668,82 @@
       0 0 14px rgba(79, 195, 255, 0.58);
   }
 
+  .combat-status-controls {
+    display: inline-flex;
+    grid-column: 8;
+    align-items: center;
+    align-self: center;
+    justify-self: end;
+    gap: 12px;
+    height: 43px;
+    min-width: 0;
+  }
+
+  .combat-npc-controls {
+    position: relative;
+    display: inline-grid;
+    align-self: start;
+    width: 62px;
+    min-height: 14px;
+  }
+
+  .combat-npc-toggle {
+    grid-column: auto;
+    justify-self: start;
+    gap: 3px;
+    color: rgba(217, 245, 255, 0.46);
+    font-size: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .combat-npc-toggle input {
+    width: 9px;
+    height: 9px;
+    border-color: rgba(79, 195, 255, 0.28);
+    background: rgba(79, 195, 255, 0.03);
+    box-shadow: inset 0 0 0 2px rgba(3, 7, 12, 0.95);
+  }
+
+  .combat-npc-toggle input:checked {
+    background: rgba(79, 195, 255, 0.74);
+    box-shadow:
+      inset 0 0 0 2px rgba(3, 7, 12, 0.95),
+      0 0 7px rgba(79, 195, 255, 0.32);
+  }
+
+  .combat-npc-fields {
+    position: absolute;
+    top: 14px;
+    left: 0;
+    display: grid;
+    width: 62px;
+    gap: 2px;
+  }
+
+  .combat-npc-fields .combat-field {
+    gap: 1px;
+  }
+
+  .combat-npc-fields .combat-field span {
+    overflow: hidden;
+    color: rgba(217, 245, 255, 0.52);
+    font-size: 6px;
+    letter-spacing: 0;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .combat-npc-fields .combat-field input {
+    height: 16px;
+    padding: 1px 4px;
+    font-size: 10px;
+    line-height: 1;
+  }
+
   .combat-side-buttons {
     display: grid;
-    grid-column: 8;
+    grid-column: 9;
     grid-template-columns: repeat(2, 20px);
     gap: 5px;
     align-self: center;
@@ -1704,7 +1781,7 @@
 
   .combat-delete-button {
     position: relative;
-    grid-column: 9;
+    grid-column: 10;
     width: 18px;
     height: 18px;
     align-self: center;
@@ -2950,6 +3027,43 @@
   .wizard-checkbox input {
     width: 18px;
     height: 18px;
+    accent-color: #4fc3ff;
+  }
+
+  .wizard-radio-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid rgba(79, 195, 255, 0.28);
+    background: rgba(79, 195, 255, 0.07);
+    padding: 14px;
+  }
+
+  .wizard-radio-toggle legend {
+    width: 100%;
+    margin-bottom: 2px;
+    color: rgba(217, 245, 255, 0.72);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .wizard-radio-toggle label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(217, 245, 255, 0.86);
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .wizard-radio-toggle input {
+    width: 17px;
+    height: 17px;
     accent-color: #4fc3ff;
   }
 
@@ -5129,6 +5243,17 @@ input[type='reset'] {
   .combat-prone-toggle {
     grid-column: auto;
     justify-self: start;
+  }
+
+  .combat-status-controls {
+    grid-column: auto;
+    justify-self: start;
+  }
+
+  .combat-npc-controls {
+    grid-column: auto;
+    justify-self: start;
+    width: 62px;
   }
 
   .combat-delete-button {

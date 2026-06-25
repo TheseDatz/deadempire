@@ -33,6 +33,7 @@ function createBlankSheet(slug) {
     appearance: '',
     personality: '',
     quote: '',
+    languages: '',
     attributes: DEFAULT_ATTRIBUTES.map((name) => ({
       name,
       dice: '2D',

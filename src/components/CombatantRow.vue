@@ -47,10 +47,36 @@ const emit = defineEmits(['delete', 'set-side'])
       </select>
     </label>
 
-    <label class="combat-prone-toggle">
-      <input v-model="combatant.knockedProne" type="checkbox" />
-      <span>Knocked Prone</span>
+    <label class="combat-field combat-relative-position">
+      <span>Relative Position</span>
+      <input v-model="combatant.relativePosition" type="text" />
     </label>
+
+    <div class="combat-status-controls">
+      <div class="combat-npc-controls">
+        <label class="combat-prone-toggle combat-npc-toggle">
+          <input v-model="combatant.isNpc" type="checkbox" />
+          <span>NPC?</span>
+        </label>
+
+        <div v-if="combatant.isNpc" class="combat-npc-fields">
+          <label class="combat-field">
+            <span>Active Stuns</span>
+            <input v-model.number="combatant.activeStuns" type="number" min="0" />
+          </label>
+
+          <label class="combat-field">
+            <span>Damage</span>
+            <input v-model="combatant.damage" type="text" />
+          </label>
+        </div>
+      </div>
+
+      <label class="combat-prone-toggle">
+        <input v-model="combatant.knockedProne" type="checkbox" />
+        <span>Knocked Prone</span>
+      </label>
+    </div>
 
     <div class="combat-side-buttons" aria-label="Side color">
       <button type="button" class="combat-side-red" aria-label="Set side red" @click="emit('set-side', 'red')"></button>

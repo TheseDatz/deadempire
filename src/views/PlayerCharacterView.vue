@@ -105,6 +105,7 @@ watch(
     nextSheet.newRepublicCredits = nextSheet.newRepublicCredits ?? '0'
     nextSheet.peggats = nextSheet.peggats ?? '0'
     nextSheet.requisitionTokens = nextSheet.requisitionTokens ?? '0'
+    nextSheet.languages = nextSheet.languages ?? ''
     sheet.value = nextSheet
     weapons.value = (nextCharacter.weapons ?? []).map((weapon) => ({ ...weapon }))
     armor.value = (nextCharacter.armor ?? []).map((armorItem) => ({ ...armorItem }))
@@ -676,6 +677,11 @@ function increaseCombatActions() {
           <label class="sheet-field mt-4">
             <span>A Quote</span>
             <input v-model="sheet.quote" />
+          </label>
+
+          <label class="sheet-field mt-4">
+            <span>Languages</span>
+            <textarea v-model="sheet.languages" rows="2" />
           </label>
         </div>
 
