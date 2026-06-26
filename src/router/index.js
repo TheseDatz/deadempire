@@ -3,6 +3,7 @@ import AdminView from '../views/AdminView.vue'
 import HomeView from '../views/HomeView.vue'
 import AboutView from '../views/AboutView.vue'
 import BestiaryView from '../views/BestiaryView.vue'
+import CanvasView from '../views/CanvasView.vue'
 import CharactersView from '../views/CharactersView.vue'
 import CharacterWizardView from '../views/CharacterWizardView.vue'
 import CombatView from '../views/CombatView.vue'
@@ -66,6 +67,11 @@ const router = createRouter({
       path: '/tools',
       name: 'tools',
       component: ToolsView,
+    },
+    {
+      path: '/canvas',
+      name: 'canvas',
+      component: CanvasView,
     },
     {
       path: '/playercharacter/:characterName',

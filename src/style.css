@@ -543,6 +543,7 @@
   .galaxy-page,
   .character-sheet-page,
   .combat-page,
+  .canvas-page,
   .map-page,
   .tools-page,
   .bestiary-page,
@@ -2150,6 +2151,10 @@
   }
 
   .map-page + .site-footer {
+    display: none;
+  }
+
+  .canvas-page + .site-footer {
     display: none;
   }
 
