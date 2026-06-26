@@ -25,12 +25,14 @@ export const combatReferences = [
   {
     title: 'Range Difficulties',
     summary: 'Base shooting difficulty by range band.',
-    columns: ['Range', 'Difficulty'],
+    columns: ['Range', 'Difficulty', 'Number'],
     rows: [
-      ['Point-blank', 'Very Easy'],
-      ['Short', 'Easy'],
-      ['Medium', 'Moderate'],
-      ['Long', 'Difficult'],
+      ['Point-blank', 'Very Easy', '1-5'],
+      ['Short', 'Easy', '6-10'],
+      ['Medium', 'Moderate', '11-15'],
+      ['Long', 'Difficult', '16-20'],
+      ['Extended', 'Very Difficult', '21-30'],
+      ['Extreme', 'Heroic', '30+'],
     ],
   },
   {

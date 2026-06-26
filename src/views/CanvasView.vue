@@ -1,7 +1,9 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import ReferenceCharts from '../components/ReferenceCharts.vue'
 import canvasAssets from '../data/canvasAssets.json'
 import { loadPlayerCharacters } from '../data/characters'
+import { combatInstructions } from '../data/combatInstructions'
 
 const storageKey = 'sw6d-canvas-scene-v1'
 const boardSize = { width: 3600, height: 2400 }
@@ -45,6 +47,7 @@ const sceneMessage = ref('')
 const assetSearch = ref('')
 const showCombatSidebar = ref(false)
 const showAssetSidebar = ref(false)
+const showInstructions = ref(false)
 const playerImportMessage = ref('')
 
 const selectedObject = computed(() => scene.value.objects.find((object) => object.id === selectedId.value))
@@ -57,7 +60,9 @@ const selectedTokenCombatant = computed(() => {
 })
 const orderedObjects = computed(() => [...scene.value.objects].sort((a, b) => a.z - b.z))
 const orderedCombatants = computed(() =>
-  [...scene.value.combat.combatants].sort((a, b) => Number(a.turnOrder) - Number(b.turnOrder)),
+  [...scene.value.combat.combatants]
+    .filter((combatant) => !combatant.dead)
+    .sort((a, b) => Number(a.turnOrder) - Number(b.turnOrder)),
 )
 const filteredCanvasAssets = computed(() => {
   const query = assetSearch.value.trim().toLowerCase()
@@ -111,6 +116,10 @@ const gridStyle = computed(() => ({
 function objectTransform(object) {
   const rotation = object.type === 'image' || object.type === 'text' ? Number(object.rotation) || 0 : 0
   return `translate(-50%, -50%) rotate(${rotation}deg)`
+}
+
+function objectZIndex(object) {
+  return selectedId.value === object.id ? 100000 : object.z
 }
 
 function hexToRgba(hex, opacity) {
@@ -491,6 +500,7 @@ function createCombatant(name = 'New Combatant') {
     damage: '',
     side: 'blue',
     color: '#4fc3ff',
+    dead: false,
   }
 }
 
@@ -551,6 +561,7 @@ function createPlayerCombatant(character, turnOrder) {
     health: character.health || 'Healthy',
     side: 'blue',
     color: '#4fc3ff',
+    dead: false,
   }
 }
 
@@ -955,7 +966,7 @@ watch(
             :key="object.id"
             class="canvas-object"
             :class="[`canvas-object-${object.type}`, { 'canvas-object-selected': selectedId === object.id, 'canvas-object-locked': object.locked }]"
-            :style="{ left: `${object.x}px`, top: `${object.y}px`, zIndex: object.z, transform: objectTransform(object) }"
+            :style="{ left: `${object.x}px`, top: `${object.y}px`, zIndex: objectZIndex(object), transform: objectTransform(object) }"
             @pointerdown="startObjectDrag($event, object)"
             @dblclick.stop="object.type === 'text' && editTextObject(object)"
           >
@@ -975,6 +986,7 @@ watch(
               <img v-if="object.imageSrc" :src="object.imageSrc" alt="" draggable="false" />
               <span v-else>{{ object.name.slice(0, 2) }}</span>
               <strong>{{ object.name }}</strong>
+              <span v-if="scene.combat.combatants.find((combatant) => combatant.id === object.combatantId)?.dead" class="canvas-token-dead-mark" aria-hidden="true"></span>
             </div>
 
             <div
@@ -1049,6 +1061,10 @@ watch(
                 <label class="canvas-token-checkbox">
                   <input v-model="selectedTokenCombatant.isNpc" type="checkbox" />
                   <span>NPC</span>
+                </label>
+                <label class="canvas-token-checkbox canvas-token-dead-toggle">
+                  <input v-model="selectedTokenCombatant.dead" type="checkbox" />
+                  <span>Dead</span>
                 </label>
                 <label v-if="selectedTokenCombatant.isNpc">
                   <span>Stuns</span>
@@ -1154,6 +1170,31 @@ watch(
       </div>
     </aside>
 
+    <div
+      v-if="showInstructions"
+      class="combat-instructions-backdrop"
+      role="presentation"
+      @click.self="showInstructions = false"
+    >
+      <section class="combat-instructions" role="dialog" aria-modal="true" aria-labelledby="canvas-combat-instructions-title">
+        <div class="combat-instructions-header">
+          <div>
+            <p>Round Guide</p>
+            <h2 id="canvas-combat-instructions-title">Combat Instructions</h2>
+          </div>
+          <button type="button" aria-label="Close combat instructions" @click="showInstructions = false">Close</button>
+        </div>
+
+        <div class="combat-instructions-list">
+          <section v-for="instruction in combatInstructions" :key="instruction.title" class="combat-instruction-step">
+            <p>{{ instruction.step }}</p>
+            <h3>{{ instruction.title }}</h3>
+            <span>{{ instruction.details }}</span>
+          </section>
+        </div>
+      </section>
+    </div>
+
     <aside class="canvas-toolbar" aria-label="Canvas toolbar">
       <div class="canvas-toolbar-group canvas-tool-mode-group">
         <button type="button" :class="{ 'canvas-tool-active': activeTool === 'select' }" title="Select and move objects" @click="activeTool = 'select'">Sel</button>
@@ -1168,6 +1209,7 @@ watch(
         <button type="button" title="Add character token" @click="addToken">Tok</button>
         <button type="button" title="Add text" @click="addText">Txt</button>
         <button type="button" :class="{ 'canvas-tool-active': showCombatSidebar }" title="Toggle combat tracker" @click="showCombatSidebar = !showCombatSidebar">Cbt</button>
+        <button type="button" :class="{ 'canvas-tool-active': showInstructions }" title="Open combat instructions" @click="showInstructions = true">Inst</button>
       </div>
 
       <div class="canvas-toolbar-group canvas-toolbar-fields">
@@ -1267,6 +1309,8 @@ watch(
         </div>
       </details>
     </aside>
+
+    <ReferenceCharts />
   </main>
 </template>
 
@@ -1445,6 +1489,37 @@ watch(
   text-transform: uppercase;
 }
 
+.canvas-token-dead-mark {
+  position: absolute !important;
+  inset: 10%;
+  z-index: 3 !important;
+  display: block;
+  pointer-events: none;
+}
+
+.canvas-token-dead-mark::before,
+.canvas-token-dead-mark::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 125%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 35, 24, 0.92);
+  box-shadow:
+    0 0 5px rgba(255, 255, 255, 0.5),
+    0 0 16px rgba(255, 35, 24, 0.8);
+}
+
+.canvas-token-dead-mark::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.canvas-token-dead-mark::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
 .canvas-token strong {
   position: absolute;
   top: calc(100% + 8px);
@@ -1548,6 +1623,20 @@ watch(
   accent-color: #4fc3ff;
 }
 
+.canvas-token-dead-toggle input {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 59, 36, 0.78);
+  border-radius: 999px;
+  background: rgba(3, 7, 12, 0.86);
+}
+
+.canvas-token-dead-toggle input:checked {
+  box-shadow: inset 0 0 0 3px rgba(3, 7, 12, 0.95);
+  background: #ff3b24;
+}
+
 .canvas-token-color {
   margin-top: 10px;
 }
@@ -1614,7 +1703,7 @@ watch(
   top: 72px;
   right: 16px;
   bottom: 168px;
-  z-index: 29;
+  z-index: 10020;
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
   width: 430px;
@@ -1633,7 +1722,7 @@ watch(
   top: 72px;
   left: 16px;
   bottom: 168px;
-  z-index: 29;
+  z-index: 10020;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   width: 360px;
@@ -1862,7 +1951,7 @@ watch(
 .canvas-toolbar {
   position: fixed;
   inset: auto 0 0;
-  z-index: 30;
+  z-index: 10030;
   display: flex;
   min-height: 136px;
   align-content: center;
@@ -1877,6 +1966,17 @@ watch(
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 -18px 46px rgba(0, 0, 0, 0.5);
+}
+
+:deep(.reference-charts) {
+  z-index: 10040;
+  right: 18px;
+  bottom: 176px;
+}
+
+:deep(.reference-overlay),
+:global(.canvas-page .combat-instructions-backdrop) {
+  z-index: 10060;
 }
 
 .canvas-toolbar-group {
