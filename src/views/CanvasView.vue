@@ -119,7 +119,9 @@ function objectTransform(object) {
 }
 
 function objectZIndex(object) {
-  return selectedId.value === object.id ? 100000 : object.z
+  const layerOffset = object.type === 'token' ? 100000000 : 0
+  const selectedOffset = selectedId.value === object.id ? 10000000 : 0
+  return layerOffset + selectedOffset + (Number(object.z) || 0)
 }
 
 function hexToRgba(hex, opacity) {
