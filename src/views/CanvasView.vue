@@ -1974,6 +1974,16 @@ watch(
   bottom: 176px;
 }
 
+:global(.canvas-page ~ .dice-roller) {
+  z-index: 10040;
+  right: 96px;
+  bottom: 176px;
+}
+
+:global(.canvas-page ~ .dice-roller .dice-overlay) {
+  z-index: 10070;
+}
+
 :deep(.reference-overlay),
 :global(.canvas-page .combat-instructions-backdrop) {
   z-index: 10060;
