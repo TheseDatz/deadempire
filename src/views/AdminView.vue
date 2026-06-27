@@ -1,5 +1,9 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import ContentBlockEditor from '../components/ContentBlockEditor.vue'
+import ContentBlockPreview from '../components/ContentBlockPreview.vue'
+import ContentBlockRenderer from '../components/ContentBlockRenderer.vue'
+import { createArc, deleteArc, loadArcs, updateArc } from '../services/arcs'
 import { createBestiaryNpc } from '../services/bestiary'
 import { createFaction } from '../services/factions'
 import { createPlanet } from '../services/planets'
@@ -7,19 +11,68 @@ import {
   exportCharacterSheetBackup,
   isSupabaseConfigured,
 } from '../services/characterSheets'
+import {
+  createBlankBlockList,
+  findInvalidImageBlock,
+  formBlocksFromContent,
+  normalizeDelimitedList,
+  normalizeEditorBlocks,
+  slugify,
+} from '../services/contentBlocks'
 
 const isWorking = ref(false)
 const isSavingNpc = ref(false)
 const isSavingFaction = ref(false)
 const isSavingPlanet = ref(false)
+const isLoadingArcs = ref(true)
+const isSavingArc = ref(false)
+const isDeletingArc = ref(false)
 const isNpcModalOpen = ref(false)
 const isFactionModalOpen = ref(false)
 const isPlanetModalOpen = ref(false)
+const isArcModalOpen = ref(false)
 const message = ref('')
 const errorMessage = ref('')
+const arcMessage = ref('')
+const arcErrorMessage = ref('')
+const arcEditorErrorMessage = ref('')
+const arcSearchTerm = ref('')
+const selectedArcTag = ref('All')
+const arcs = ref([])
+const selectedArc = ref(null)
+const editingArcSlug = ref('')
 const npcForm = ref(createBlankNpcForm())
 const factionForm = ref(createBlankFactionForm())
 const planetForm = ref(createBlankPlanetForm())
+const arcForm = ref(createBlankArcForm())
+
+const arcTags = computed(() => [
+  'All',
+  ...new Set(arcs.value.flatMap((arc) => arc.tags)),
+].sort((first, second) => {
+  if (first === 'All') return -1
+  if (second === 'All') return 1
+  return first.localeCompare(second)
+}))
+
+const filteredArcs = computed(() => {
+  const query = arcSearchTerm.value.trim().toLowerCase()
+
+  return arcs.value.filter((arc) => {
+    const matchesTag = selectedArcTag.value === 'All' || arc.tags.includes(selectedArcTag.value)
+    const blockText = arc.contentBlocks.flatMap((block) => {
+      if (block.type === 'image') return [block.url, block.alt]
+      if (block.type === 'accordion') return block.items.flatMap((item) => [item.title, item.content])
+      if (block.type === 'reference') {
+        return [block.title, block.content, ...block.sections.flatMap((section) => [section.title, section.content])]
+      }
+      return [block.content]
+    })
+    const haystack = [arc.date, arc.title, ...arc.tags, ...arc.body, ...blockText].join(' ').toLowerCase()
+
+    return matchesTag && (!query || haystack.includes(query))
+  })
+})
 
 function createBlankNpcForm() {
   return {
@@ -57,9 +110,24 @@ function createBlankFactionForm() {
   }
 }
 
+function createBlankArcForm() {
+  return {
+    title: '',
+    date: new Date().toISOString().slice(0, 10),
+    tags: '',
+    blocks: createBlankBlockList(),
+  }
+}
+
 function clearFeedback() {
   message.value = ''
   errorMessage.value = ''
+}
+
+function clearArcFeedback() {
+  arcMessage.value = ''
+  arcErrorMessage.value = ''
+  arcEditorErrorMessage.value = ''
 }
 
 function openNpcModal() {
@@ -94,6 +162,41 @@ function openPlanetModal() {
   clearFeedback()
   planetForm.value = createBlankPlanetForm()
   isPlanetModalOpen.value = true
+}
+
+function openNewArcModal() {
+  clearArcFeedback()
+  editingArcSlug.value = ''
+  arcForm.value = createBlankArcForm()
+  isArcModalOpen.value = true
+}
+
+function openArcViewer(arc) {
+  selectedArc.value = arc
+}
+
+function closeArcViewer() {
+  selectedArc.value = null
+}
+
+function openEditArcModal(arc) {
+  clearArcFeedback()
+  editingArcSlug.value = arc.slug
+  arcForm.value = {
+    title: arc.title,
+    date: arc.date,
+    tags: arc.tags.join(', '),
+    blocks: formBlocksFromContent(arc.contentBlocks, arc.body),
+  }
+  isArcModalOpen.value = true
+}
+
+function closeArcModal() {
+  if (isSavingArc.value) {
+    return
+  }
+
+  isArcModalOpen.value = false
 }
 
 function closePlanetModal() {
@@ -209,6 +312,113 @@ async function savePlanet() {
   isSavingPlanet.value = false
 }
 
+async function loadArcEntries() {
+  isLoadingArcs.value = true
+  arcErrorMessage.value = ''
+
+  const { arcs: loadedArcs, error } = await loadArcs()
+
+  if (error) {
+    arcErrorMessage.value = error.message
+    arcs.value = []
+  } else {
+    arcs.value = loadedArcs
+  }
+
+  isLoadingArcs.value = false
+}
+
+async function saveArc() {
+  clearArcFeedback()
+
+  const title = arcForm.value.title.trim()
+  const blocks = normalizeEditorBlocks(arcForm.value.blocks)
+  const invalidImage = findInvalidImageBlock(blocks)
+
+  if (!title) {
+    arcEditorErrorMessage.value = 'Title is required.'
+    return
+  }
+
+  if (!arcForm.value.date) {
+    arcEditorErrorMessage.value = 'Date is required.'
+    return
+  }
+
+  if (!blocks.length) {
+    arcEditorErrorMessage.value = 'Add at least one text, image, GM note, or accordion block.'
+    return
+  }
+
+  if (invalidImage) {
+    arcEditorErrorMessage.value = 'Image URLs must start with http:// or https://.'
+    return
+  }
+
+  isSavingArc.value = true
+
+  const payload = {
+    slug: `${slugify(title, 'arc')}-${arcForm.value.date}`,
+    title,
+    date: arcForm.value.date,
+    tags: normalizeDelimitedList(arcForm.value.tags),
+    contentBlocks: blocks,
+  }
+  const result = editingArcSlug.value ? await updateArc(editingArcSlug.value, payload) : await createArc(payload)
+
+  if (result.error) {
+    arcEditorErrorMessage.value = result.error.message
+  } else {
+    const savedArc = result.arc
+    const previousSlug = editingArcSlug.value
+    arcs.value = [savedArc, ...arcs.value.filter((arc) => arc.slug !== previousSlug)]
+      .filter((item, index, list) => list.findIndex((candidate) => candidate.slug === item.slug) === index)
+      .sort((first, second) => new Date(second.date) - new Date(first.date))
+    arcMessage.value = `${editingArcSlug.value ? 'Updated' : 'Added'} ${savedArc.title}.`
+    arcForm.value = createBlankArcForm()
+    editingArcSlug.value = ''
+    isArcModalOpen.value = false
+  }
+
+  isSavingArc.value = false
+}
+
+async function removeArc(arc) {
+  if (isDeletingArc.value) {
+    return
+  }
+
+  const confirmed = window.confirm(`Delete "${arc.title}"? This cannot be undone.`)
+
+  if (!confirmed) {
+    return
+  }
+
+  clearArcFeedback()
+  isDeletingArc.value = true
+
+  const { error } = await deleteArc(arc.slug)
+
+  if (error) {
+    arcErrorMessage.value = error.message
+  } else {
+    arcs.value = arcs.value.filter((entry) => entry.slug !== arc.slug)
+    arcMessage.value = `Deleted ${arc.title}.`
+  }
+
+  isDeletingArc.value = false
+}
+
+function formatArcDate(date) {
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(`${date}T00:00:00`))
+}
+
+onMounted(loadArcEntries)
+
 </script>
 
 <template>
@@ -248,6 +458,64 @@ async function savePlanet() {
 
         <p v-if="message" class="profile-message mt-5">{{ message }}</p>
         <p v-if="errorMessage" class="profile-message profile-message-error mt-5">{{ errorMessage }}</p>
+      </section>
+
+      <section class="admin-panel mt-10">
+        <div class="admin-section-header">
+          <div>
+            <p class="text-sm font-bold uppercase tracking-[0.28em] text-cyan-100/70">GM Prep</p>
+            <h2>Arcs</h2>
+          </div>
+          <button class="profile-button" type="button" @click="openNewArcModal">New Arc</button>
+        </div>
+
+        <p class="admin-copy mt-3">
+          Build session prep notes with the shared post block system, then search and filter them by tags.
+        </p>
+
+        <section class="game-log-tools mt-6">
+          <label>
+            <span>Search Arcs</span>
+            <input v-model="arcSearchTerm" type="search" placeholder="Search title, note text, tag..." />
+          </label>
+
+          <label>
+            <span>Filter Tag</span>
+            <select v-model="selectedArcTag">
+              <option v-for="tag in arcTags" :key="tag">{{ tag }}</option>
+            </select>
+          </label>
+        </section>
+
+        <p v-if="arcMessage" class="profile-message mt-5">{{ arcMessage }}</p>
+        <p v-if="arcErrorMessage" class="profile-message profile-message-error mt-5">{{ arcErrorMessage }}</p>
+        <p v-else-if="isLoadingArcs" class="mt-5 text-cyan-100/70">Loading arcs...</p>
+
+        <section v-else class="admin-arc-list mt-6" aria-label="Arcs">
+          <article v-for="arc in filteredArcs" :key="arc.slug" class="admin-arc-card">
+            <div>
+              <time :datetime="arc.date">{{ formatArcDate(arc.date) }}</time>
+              <h3>{{ arc.title }}</h3>
+              <p>{{ arc.tags.join(', ') || 'No tags' }}</p>
+            </div>
+
+            <div class="admin-arc-actions">
+              <button class="profile-button profile-button-secondary" type="button" :disabled="isDeletingArc" @click="openArcViewer(arc)">
+                View
+              </button>
+              <button class="profile-button profile-button-secondary" type="button" :disabled="isDeletingArc" @click="openEditArcModal(arc)">
+                Edit
+              </button>
+              <button class="profile-button profile-button-danger" type="button" :disabled="isDeletingArc" @click="removeArc(arc)">
+                Delete
+              </button>
+            </div>
+          </article>
+        </section>
+
+        <p v-if="!isLoadingArcs && !arcErrorMessage && filteredArcs.length === 0" class="mt-5 text-cyan-100/70">
+          No matching arcs found.
+        </p>
       </section>
     </section>
 
@@ -502,6 +770,83 @@ async function savePlanet() {
             </button>
           </div>
         </form>
+      </section>
+    </div>
+
+    <div v-if="selectedArc" class="admin-modal-backdrop" role="presentation" @click.self="closeArcViewer">
+      <article class="admin-modal admin-arc-view-modal" role="dialog" aria-modal="true" aria-labelledby="arc-view-title">
+        <div class="admin-modal-header">
+          <div>
+            <p class="text-sm font-bold uppercase tracking-[0.28em] text-cyan-100/70">Arc Briefing</p>
+            <h2 id="arc-view-title">{{ selectedArc.title }}</h2>
+          </div>
+          <button class="admin-icon-button" type="button" aria-label="Close" @click="closeArcViewer">
+            x
+          </button>
+        </div>
+
+        <header class="admin-arc-view-header mt-8">
+          <time :datetime="selectedArc.date">{{ formatArcDate(selectedArc.date) }}</time>
+          <p>{{ selectedArc.tags.join(', ') || 'No tags' }}</p>
+        </header>
+
+        <ContentBlockRenderer :blocks="selectedArc.contentBlocks" :fallback-body="selectedArc.body" show-gm-notes />
+      </article>
+    </div>
+
+    <div v-if="isArcModalOpen" class="admin-modal-backdrop game-log-editor-backdrop" role="presentation" @click.self="closeArcModal">
+      <section class="admin-modal game-log-editor-modal" role="dialog" aria-modal="true" aria-labelledby="arc-editor-title">
+        <div class="admin-modal-header">
+          <div>
+            <p class="text-sm font-bold uppercase tracking-[0.28em] text-cyan-100/70">Arc Console</p>
+            <h2 id="arc-editor-title">{{ editingArcSlug ? 'Edit Arc' : 'New Arc' }}</h2>
+          </div>
+          <button class="admin-icon-button" type="button" aria-label="Close" :disabled="isSavingArc" @click="closeArcModal">
+            x
+          </button>
+        </div>
+
+        <div class="game-log-editor-layout mt-6">
+          <form class="admin-import-form game-log-editor-form" @submit.prevent="saveArc">
+            <div class="admin-form-grid admin-form-grid-two">
+              <label>
+                <span>Title</span>
+                <input v-model="arcForm.title" type="text" required />
+              </label>
+
+              <label>
+                <span>Date</span>
+                <input v-model="arcForm.date" type="date" required />
+              </label>
+            </div>
+
+            <label>
+              <span>Tags</span>
+              <input v-model="arcForm.tags" type="text" placeholder="Act II, Nal Hutta, Underworld" />
+            </label>
+
+            <ContentBlockEditor v-model="arcForm.blocks" :disabled="isSavingArc" enable-accordion enable-reference />
+
+            <p v-if="arcEditorErrorMessage" class="profile-message profile-message-error">{{ arcEditorErrorMessage }}</p>
+
+            <div class="admin-actions">
+              <button class="profile-button" type="submit" :disabled="isSavingArc">
+                {{ isSavingArc ? 'Saving...' : editingArcSlug ? 'Save Changes' : 'Save Arc' }}
+              </button>
+              <button class="profile-button profile-button-secondary" type="button" :disabled="isSavingArc" @click="closeArcModal">
+                Cancel
+              </button>
+            </div>
+          </form>
+
+          <ContentBlockPreview
+            :title="arcForm.title"
+            :date="arcForm.date"
+            :meta="arcForm.tags"
+            empty-meta="No tags listed"
+            :blocks="arcForm.blocks"
+          />
+        </div>
       </section>
     </div>
   </main>

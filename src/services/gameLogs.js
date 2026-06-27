@@ -1,56 +1,10 @@
 import { isSupabaseConfigured, supabase } from './supabaseClient'
+import { normalizeContentBlocks, normalizeStringList } from './contentBlocks'
 
 export { isSupabaseConfigured }
 
 const GAME_LOG_COLUMNS =
   'id, slug, session_date, title, participating_characters, body, content_blocks, updated_at'
-
-const ALLOWED_TEXT_SIZES = new Set(['normal', 'large', 'heading', 'signal'])
-
-function normalizeStringList(list) {
-  if (!Array.isArray(list)) {
-    return []
-  }
-
-  return list.map((item) => String(item || '').trim()).filter(Boolean)
-}
-
-function normalizeContentBlocks(blocks) {
-  if (!Array.isArray(blocks)) {
-    return []
-  }
-
-  return blocks
-    .map((block) => {
-      if (block?.type === 'image') {
-        return {
-          type: 'image',
-          url: String(block.url || '').trim(),
-          alt: String(block.alt || '').trim(),
-        }
-      }
-
-      if (block?.type === 'gm-note') {
-        return {
-          type: 'gm-note',
-          content: String(block.content || '').trim(),
-        }
-      }
-
-      return {
-        type: 'text',
-        size: ALLOWED_TEXT_SIZES.has(block?.size) ? block.size : 'normal',
-        content: String(block?.content || '').trim(),
-      }
-    })
-    .filter((block) => {
-      if (block.type === 'image') {
-        return block.url
-      }
-
-      return block.content
-    })
-}
 
 function rowToGameLog(row) {
   const contentBlocks = normalizeContentBlocks(row.content_blocks)
