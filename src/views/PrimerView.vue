@@ -40,6 +40,30 @@ const timelineEvents = [
   },
   {
     year: '4 ABY',
+    title: 'Drommel Withdraws to Oplovis',
+    body:
+      'Admiral Gaen Drommel abandons Coruscant and retreats to his homeworld of Oplovis. There, he gathers loyal forces and forms an isolated Imperial remnant under his personal command.',
+  },
+  {
+    year: '4 ABY',
+    title: 'Siege of Arkanis',
+    body:
+      'The Rebel Alliance lays siege to Arkanis, forcing Hux to flee as the Imperial academy is destroyed. The loss sends another wave of officers, cadets, and loyalists scattering into the broken Empire.',
+  },
+  {
+    year: '4 ABY',
+    title: 'Confederacy Reborn on Bosph',
+    body:
+      'Battle droids assault the Imperial garrison on Gulma, inspiring nearby worlds to form a new Confederacy of Independent Systems. The Separatist tactical droid Kalani is named Supreme Martial Commander, while a new Separatist parliament convenes on Bosph.',
+  },
+  {
+    year: '4 ABY',
+    title: 'Harrsk Enters the Deep Core',
+    body:
+      'Admiral Blitzer Harrsk takes his forces into the Deep Core, withdrawing from the wider Imperial collapse and laying the groundwork for his own fortified command.',
+  },
+  {
+    year: '4 ABY',
     title: 'Operation Cinder Orders',
     body:
       'Loyalists to Palpatine are approached by Sentinel contingency droids and given orders to commence Operation Cinder.',
@@ -49,6 +73,12 @@ const timelineEvents = [
     title: 'The Withered Whisper Refuses',
     body:
       'Lord Fel has the Sentinel droid sent to The Withered Whisper destroyed, re-affirming the crew\'s loyalty to Vader rather than Palpatine. He addresses the crew and blames the Emperor\'s weakness for the disastrous events of the last few weeks.',
+  },
+  {
+    year: '4 ABY',
+    title: 'Gideon Breaks from Command',
+    body:
+      'Moff Gideon reorganizes his forces in the Mandalorian sector, breaks from central Imperial command, and begins shaping his own remnant.',
   },
   {
     year: '4 ABY',
@@ -75,10 +105,28 @@ const timelineEvents = [
       'The ISB names Grand Vizier Mas Amedda as the new Regent of the Empire.',
   },
   {
+    year: '4 ABY',
+    title: 'Brendol Hux Defies the ISB',
+    body:
+      'Commandant Brendol Hux takes control of a portion of Rax\'s surviving forces and openly declares hostility toward the ISB government.',
+  },
+  {
+    year: '4 ABY',
+    title: 'Pellaeon Waits for Thrawn',
+    body:
+      'Captain Gilad Pellaeon, still hoping for the return of Grand Admiral Thrawn, begins ignoring the new ISB government and forms a de facto remnant in the galactic north.',
+  },
+  {
     year: '5 ABY',
     title: 'Uprising on Chandrilla',
     body:
       'The core fleet is weakened after the Battle of Vardos, allowing the Rebel Alliance and defecting planetary defense forces around Chandrilla to claim a large section of the Core Worlds.',
+  },
+  {
+    year: '5 ABY',
+    title: 'Zsinj Claims the Regency',
+    body:
+      'A large portion of the Imperial Navy defects north to Serenno, where Warlord of the Empire Moff Zsinj declares the ISB government illegitimate and names himself the new Imperial Regent.',
   },
   {
     year: '5 ABY',
@@ -91,6 +139,18 @@ const timelineEvents = [
     title: 'Formation of the New Republic',
     body:
       'Rebel leaders gather around Chandrilla and attempt to transform their military alliance into a government. The declaration is bold, but legitimacy still has to be won system by system.',
+  },
+  {
+    year: '5 ABY',
+    title: 'Zero Command Forms',
+    body:
+      'Admiral Blitzer Harrsk and the planetary government of Cortina formalize their break from the wider Empire, creating the Deep Core remnant known as Zero Command.',
+  },
+  {
+    year: '5 ABY',
+    title: 'The Greater Maldrood Declared',
+    body:
+      'Admiral Treuten Teradoc gathers his forces around Centares and declares the independent state of the Greater Maldrood, seizing several important shipyards from the collapsing Imperial chain of command.',
   },
   {
     year: '5 ABY',

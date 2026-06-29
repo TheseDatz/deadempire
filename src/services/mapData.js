@@ -100,23 +100,6 @@ export async function saveMapData(labels, borders) {
     ...borders.map((border, index) => overlayToRow(border, 'border', labels.length + index)),
   ]
 
-  const ids = rows.map((row) => row.id)
-
-  if (rows.length > 0) {
-    const { error } = await supabase.from('map_data').upsert(rows, { onConflict: 'id' })
-
-    if (error) {
-      return { error }
-    }
-  }
-
-  let inactiveQuery = supabase.from('map_data').update({ is_active: false }).eq('is_active', true)
-
-  if (ids.length > 0) {
-    inactiveQuery = inactiveQuery.not('id', 'in', `(${ids.join(',')})`)
-  }
-
-  const { error } = await inactiveQuery
-
+  const { error } = await supabase.rpc('save_map_data', { map_rows: rows })
   return { error }
 }
