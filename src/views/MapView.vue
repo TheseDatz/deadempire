@@ -23,12 +23,18 @@ const mapDataMessage = ref('')
 const mapDataError = ref('')
 const labels = ref([])
 const borders = ref([])
+const planets = ref([])
+const ships = ref([])
 let unsubscribe = null
 
 const isAdmin = computed(() => isAdminSession(session.value))
 const selectedLabel = computed(() => labels.value.find((label) => label.id === selectedId.value))
 const selectedBorder = computed(() => borders.value.find((border) => border.id === selectedId.value))
-const overlayData = computed(() => JSON.stringify({ labels: labels.value, borders: borders.value }, null, 2))
+const selectedPlanet = computed(() => planets.value.find((planet) => planet.id === selectedId.value))
+const selectedShip = computed(() => ships.value.find((ship) => ship.id === selectedId.value))
+const overlayData = computed(() =>
+  JSON.stringify({ labels: labels.value, borders: borders.value, planets: planets.value, ships: ships.value }, null, 2),
+)
 
 const mapTransform = computed(() => ({
   transform: `translate(${position.value.x}px, ${position.value.y}px) scale(${scale.value})`,
@@ -163,12 +169,52 @@ function dragOverlay(event) {
     }
   }
 
+  if (overlayDrag.value.type === 'planet') {
+    const planet = planets.value.find((item) => item.id === overlayDrag.value.id)
+    if (planet) {
+      planet.x = point.x
+      planet.y = point.y
+    }
+  }
+
+  if (overlayDrag.value.type === 'ship') {
+    const ship = ships.value.find((item) => item.id === overlayDrag.value.id)
+    if (ship) {
+      ship.x = point.x
+      ship.y = point.y
+    }
+  }
+
   if (overlayDrag.value.type === 'point') {
     const border = borders.value.find((item) => item.id === overlayDrag.value.id)
     if (border?.points[overlayDrag.value.pointIndex]) {
       border.points[overlayDrag.value.pointIndex] = point
     }
   }
+}
+
+function startPlanetDrag(event, planet) {
+  if (!isAdmin.value) {
+    return
+  }
+
+  event.stopPropagation()
+  event.currentTarget.setPointerCapture(event.pointerId)
+  selectedType.value = 'planet'
+  selectedId.value = planet.id
+  overlayDrag.value = { pointerId: event.pointerId, type: 'planet', id: planet.id }
+}
+
+function startShipDrag(event, ship) {
+  if (!isAdmin.value) {
+    return
+  }
+
+  event.stopPropagation()
+  event.currentTarget.setPointerCapture(event.pointerId)
+  selectedType.value = 'ship'
+  selectedId.value = ship.id
+  overlayDrag.value = { pointerId: event.pointerId, type: 'ship', id: ship.id }
 }
 
 function addLabel() {
@@ -179,6 +225,49 @@ function addLabel() {
   const id = `label-${Date.now()}`
   labels.value.push({ id, text: 'New Label', x: 2700, y: 2965, color: '#f8fdff', size: 30, opacity: 1 })
   selectedType.value = 'label'
+  selectedId.value = id
+}
+
+function addPlanet() {
+  if (!isAdmin.value) {
+    return
+  }
+
+  const id = `planet-${Date.now()}`
+  planets.value.push({
+    id,
+    name: 'New Planet',
+    x: 2700,
+    y: 2965,
+    color: '#4fc3ff',
+    radius: 24,
+    labelSize: 24,
+    labelColor: '#f8fdff',
+    opacity: 1,
+  })
+  selectedType.value = 'planet'
+  selectedId.value = id
+}
+
+function addShip() {
+  if (!isAdmin.value) {
+    return
+  }
+
+  const id = `ship-${Date.now()}`
+  ships.value.push({
+    id,
+    name: 'Party Ship',
+    x: 2700,
+    y: 2965,
+    color: '#ffef9a',
+    size: 34,
+    labelSize: 22,
+    labelColor: '#f8fdff',
+    rotation: 0,
+    opacity: 1,
+  })
+  selectedType.value = 'ship'
   selectedId.value = id
 }
 
@@ -218,6 +307,14 @@ function deleteSelected() {
     borders.value = borders.value.filter((border) => border.id !== selectedId.value)
   }
 
+  if (selectedPlanet.value) {
+    planets.value = planets.value.filter((planet) => planet.id !== selectedId.value)
+  }
+
+  if (selectedShip.value) {
+    ships.value = ships.value.filter((ship) => ship.id !== selectedId.value)
+  }
+
   selectFirstOverlay()
 }
 
@@ -245,8 +342,8 @@ function resetMap() {
 }
 
 function selectFirstOverlay() {
-  const nextSelection = labels.value[0] ?? borders.value[0]
-  selectedType.value = labels.value[0] ? 'label' : 'border'
+  const nextSelection = labels.value[0] ?? borders.value[0] ?? planets.value[0] ?? ships.value[0]
+  selectedType.value = labels.value[0] ? 'label' : borders.value[0] ? 'border' : planets.value[0] ? 'planet' : 'ship'
   selectedId.value = nextSelection?.id ?? ''
 }
 
@@ -255,7 +352,22 @@ function updateSelectionType() {
     return
   }
 
-  selectedType.value = labels.value.some((label) => label.id === selectedId.value) ? 'label' : 'border'
+  if (labels.value.some((label) => label.id === selectedId.value)) {
+    selectedType.value = 'label'
+    return
+  }
+
+  if (borders.value.some((border) => border.id === selectedId.value)) {
+    selectedType.value = 'border'
+    return
+  }
+
+  if (planets.value.some((planet) => planet.id === selectedId.value)) {
+    selectedType.value = 'planet'
+    return
+  }
+
+  selectedType.value = 'ship'
 }
 
 async function loadOverlays() {
@@ -268,7 +380,7 @@ async function loadOverlays() {
   }
 
   isLoadingMapData.value = true
-  const { labels: loadedLabels, borders: loadedBorders, error } = await loadMapData()
+  const { labels: loadedLabels, borders: loadedBorders, planets: loadedPlanets, ships: loadedShips, error } = await loadMapData()
   isLoadingMapData.value = false
 
   if (error) {
@@ -278,8 +390,11 @@ async function loadOverlays() {
 
   labels.value = loadedLabels
   borders.value = loadedBorders
+  planets.value = loadedPlanets
+  ships.value = loadedShips
   selectFirstOverlay()
-  mapDataMessage.value = loadedLabels.length || loadedBorders.length ? 'Map overlays loaded.' : 'No map overlays found.'
+  mapDataMessage.value =
+    loadedLabels.length || loadedBorders.length || loadedPlanets.length || loadedShips.length ? 'Map overlays loaded.' : 'No map overlays found.'
 }
 
 async function saveOverlays() {
@@ -297,7 +412,7 @@ async function saveOverlays() {
   }
 
   isSavingMapData.value = true
-  const { error } = await saveMapData(labels.value, borders.value)
+  const { error } = await saveMapData(labels.value, borders.value, planets.value, ships.value)
   isSavingMapData.value = false
 
   if (error) {
@@ -393,6 +508,59 @@ onUnmounted(() => {
               />
             </template>
           </g>
+
+          <g
+            v-for="planet in planets"
+            :key="planet.id"
+            class="map-planet"
+            :class="{ 'map-overlay-hotspot': isAdmin, 'map-overlay-selected': isAdmin && selectedId === planet.id }"
+            :style="{ pointerEvents: isAdmin ? 'auto' : 'none', opacity: planet.opacity ?? 1 }"
+            @pointerdown="startPlanetDrag($event, planet)"
+            @click="handleOverlayClick"
+          >
+            <circle
+              class="map-planet-dot"
+              :cx="planet.x"
+              :cy="planet.y"
+              :r="planet.radius"
+              :fill="planet.color"
+            />
+            <text
+              class="map-planet-label"
+              :x="planet.x"
+              :y="planet.y + planet.radius + planet.labelSize + 8"
+              :fill="planet.labelColor"
+              :font-size="planet.labelSize"
+            >
+              {{ planet.name }}
+            </text>
+          </g>
+
+          <g
+            v-for="ship in ships"
+            :key="ship.id"
+            class="map-ship"
+            :class="{ 'map-overlay-hotspot': isAdmin, 'map-overlay-selected': isAdmin && selectedId === ship.id }"
+            :style="{ pointerEvents: isAdmin ? 'auto' : 'none', opacity: ship.opacity ?? 1 }"
+            @pointerdown="startShipDrag($event, ship)"
+            @click="handleOverlayClick"
+          >
+            <path
+              class="map-ship-icon"
+              :d="`M ${ship.x} ${ship.y - ship.size} L ${ship.x + ship.size * 0.68} ${ship.y + ship.size * 0.82} L ${ship.x} ${ship.y + ship.size * 0.42} L ${ship.x - ship.size * 0.68} ${ship.y + ship.size * 0.82} Z`"
+              :fill="ship.color"
+              :transform="`rotate(${ship.rotation || 0} ${ship.x} ${ship.y})`"
+            />
+            <text
+              class="map-ship-label"
+              :x="ship.x"
+              :y="ship.y + ship.size + ship.labelSize + 10"
+              :fill="ship.labelColor"
+              :font-size="ship.labelSize"
+            >
+              {{ ship.name }}
+            </text>
+          </g>
         </svg>
 
         <button
@@ -420,6 +588,8 @@ onUnmounted(() => {
       <div class="map-editor-actions">
         <button type="button" :disabled="isLoadingMapData || isSavingMapData" @click="addLabel">Add Label</button>
         <button type="button" :disabled="isLoadingMapData || isSavingMapData" @click="addBorder">Add Border</button>
+        <button type="button" :disabled="isLoadingMapData || isSavingMapData" @click="addPlanet">Add Planet</button>
+        <button type="button" :disabled="isLoadingMapData || isSavingMapData" @click="addShip">Add Ship</button>
         <button type="button" :disabled="isLoadingMapData || isSavingMapData" @click="saveOverlays">
           {{ isSavingMapData ? 'Saving...' : 'Save' }}
         </button>
@@ -431,7 +601,7 @@ onUnmounted(() => {
       <p v-if="mapDataError" class="map-editor-message map-editor-message-error">{{ mapDataError }}</p>
       <p v-else-if="mapDataMessage" class="map-editor-message">{{ mapDataMessage }}</p>
 
-      <label v-if="labels.length || borders.length">
+      <label v-if="labels.length || borders.length || planets.length || ships.length">
         <span>Selection</span>
         <select v-model="selectedId" @change="updateSelectionType">
           <optgroup label="Labels">
@@ -439,6 +609,12 @@ onUnmounted(() => {
           </optgroup>
           <optgroup label="Borders">
             <option v-for="border in borders" :key="border.id" :value="border.id">{{ border.name }}</option>
+          </optgroup>
+          <optgroup label="Planets">
+            <option v-for="planet in planets" :key="planet.id" :value="planet.id">{{ planet.name }}</option>
+          </optgroup>
+          <optgroup label="Ships">
+            <option v-for="ship in ships" :key="ship.id" :value="ship.id">{{ ship.name }}</option>
           </optgroup>
         </select>
       </label>
@@ -485,6 +661,64 @@ onUnmounted(() => {
           <span>Add points by clicking map</span>
         </label>
         <button type="button" @click="deleteLastPoint">Remove Last Point</button>
+      </div>
+
+      <div v-if="selectedPlanet" class="map-editor-fields">
+        <label>
+          <span>Planet Name</span>
+          <input v-model="selectedPlanet.name" type="text" />
+        </label>
+        <label>
+          <span>Planet Color</span>
+          <input v-model="selectedPlanet.color" type="color" />
+        </label>
+        <label>
+          <span>Label Color</span>
+          <input v-model="selectedPlanet.labelColor" type="color" />
+        </label>
+        <label>
+          <span>Radius</span>
+          <input v-model.number="selectedPlanet.radius" type="number" min="4" max="120" />
+        </label>
+        <label>
+          <span>Label Size</span>
+          <input v-model.number="selectedPlanet.labelSize" type="number" min="10" max="96" />
+        </label>
+        <label>
+          <span>Transparency</span>
+          <input v-model.number="selectedPlanet.opacity" type="range" min="0.1" max="1" step="0.05" />
+        </label>
+      </div>
+
+      <div v-if="selectedShip" class="map-editor-fields">
+        <label>
+          <span>Ship Name</span>
+          <input v-model="selectedShip.name" type="text" />
+        </label>
+        <label>
+          <span>Ship Color</span>
+          <input v-model="selectedShip.color" type="color" />
+        </label>
+        <label>
+          <span>Label Color</span>
+          <input v-model="selectedShip.labelColor" type="color" />
+        </label>
+        <label>
+          <span>Icon Size</span>
+          <input v-model.number="selectedShip.size" type="number" min="8" max="140" />
+        </label>
+        <label>
+          <span>Label Size</span>
+          <input v-model.number="selectedShip.labelSize" type="number" min="10" max="96" />
+        </label>
+        <label>
+          <span>Rotation</span>
+          <input v-model.number="selectedShip.rotation" type="range" min="0" max="359" step="1" />
+        </label>
+        <label>
+          <span>Transparency</span>
+          <input v-model.number="selectedShip.opacity" type="range" min="0.1" max="1" step="0.05" />
+        </label>
       </div>
 
       <button class="map-editor-delete" type="button" @click="deleteSelected">Delete Selected</button>

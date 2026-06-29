@@ -3,7 +3,7 @@ import { isSupabaseConfigured, supabase } from './supabaseClient'
 export { isSupabaseConfigured }
 
 const MAP_DATA_COLUMNS = 'id, type, data, sort_order, updated_at'
-const MAP_DATA_TYPES = ['label', 'border']
+const MAP_DATA_TYPES = ['label', 'border', 'planet', 'ship']
 
 function normalizePoint(point) {
   return {
@@ -45,23 +45,65 @@ function normalizeBorderData(border) {
   }
 }
 
+function normalizePlanetData(planet) {
+  return {
+    name: String(planet?.name || '').trim() || 'New Planet',
+    x: Number(planet?.x) || 0,
+    y: Number(planet?.y) || 0,
+    color: String(planet?.color || '#4fc3ff').trim() || '#4fc3ff',
+    radius: Number(planet?.radius) || 24,
+    labelSize: Number(planet?.labelSize) || 24,
+    labelColor: String(planet?.labelColor || '#f8fdff').trim() || '#f8fdff',
+    opacity: Number(planet?.opacity ?? 1),
+  }
+}
+
+function normalizeShipData(ship) {
+  return {
+    name: String(ship?.name || '').trim() || 'Party Ship',
+    x: Number(ship?.x) || 0,
+    y: Number(ship?.y) || 0,
+    color: String(ship?.color || '#ffef9a').trim() || '#ffef9a',
+    size: Number(ship?.size) || 34,
+    labelSize: Number(ship?.labelSize) || 22,
+    labelColor: String(ship?.labelColor || '#f8fdff').trim() || '#f8fdff',
+    rotation: Number(ship?.rotation) || 0,
+    opacity: Number(ship?.opacity ?? 1),
+  }
+}
+
 function mapItemToOverlay(item) {
   if (item.type === 'label') {
-    return { id: item.id, ...normalizeLabelData(item.data) }
+    return { id: item.id, type: item.type, ...normalizeLabelData(item.data) }
   }
 
   if (item.type === 'border') {
-    return { id: item.id, ...normalizeBorderData(item.data) }
+    return { id: item.id, type: item.type, ...normalizeBorderData(item.data) }
+  }
+
+  if (item.type === 'planet') {
+    return { id: item.id, type: item.type, ...normalizePlanetData(item.data) }
+  }
+
+  if (item.type === 'ship') {
+    return { id: item.id, type: item.type, ...normalizeShipData(item.data) }
   }
 
   return null
 }
 
 function overlayToRow(overlay, type, sortOrder) {
+  const normalizeData = {
+    label: normalizeLabelData,
+    border: normalizeBorderData,
+    planet: normalizePlanetData,
+    ship: normalizeShipData,
+  }[type]
+
   return {
     id: overlay.id,
     type,
-    data: type === 'label' ? normalizeLabelData(overlay) : normalizeBorderData(overlay),
+    data: normalizeData(overlay),
     sort_order: sortOrder,
     is_active: true,
   }
@@ -69,7 +111,7 @@ function overlayToRow(overlay, type, sortOrder) {
 
 export async function loadMapData() {
   if (!supabase) {
-    return { labels: [], borders: [], error: new Error('Supabase is not configured.') }
+    return { labels: [], borders: [], planets: [], ships: [], error: new Error('Supabase is not configured.') }
   }
 
   const { data, error } = await supabase
@@ -84,13 +126,15 @@ export async function loadMapData() {
   const overlays = mapItems.map(mapItemToOverlay).filter(Boolean)
 
   return {
-    labels: overlays.filter((item) => mapItems.find((row) => row.id === item.id)?.type === 'label'),
-    borders: overlays.filter((item) => mapItems.find((row) => row.id === item.id)?.type === 'border'),
+    labels: overlays.filter((item) => item.type === 'label').map(({ type, ...item }) => item),
+    borders: overlays.filter((item) => item.type === 'border').map(({ type, ...item }) => item),
+    planets: overlays.filter((item) => item.type === 'planet').map(({ type, ...item }) => item),
+    ships: overlays.filter((item) => item.type === 'ship').map(({ type, ...item }) => item),
     error,
   }
 }
 
-export async function saveMapData(labels, borders) {
+export async function saveMapData(labels, borders, planets = [], ships = []) {
   if (!supabase) {
     return { error: new Error('Supabase is not configured.') }
   }
@@ -98,6 +142,8 @@ export async function saveMapData(labels, borders) {
   const rows = [
     ...labels.map((label, index) => overlayToRow(label, 'label', index)),
     ...borders.map((border, index) => overlayToRow(border, 'border', labels.length + index)),
+    ...planets.map((planet, index) => overlayToRow(planet, 'planet', labels.length + borders.length + index)),
+    ...ships.map((ship, index) => overlayToRow(ship, 'ship', labels.length + borders.length + planets.length + index)),
   ]
 
   const { error } = await supabase.rpc('save_map_data', { map_rows: rows })

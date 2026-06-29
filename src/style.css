@@ -2257,6 +2257,60 @@
     cursor: move;
   }
 
+  .map-planet {
+    cursor: move;
+  }
+
+  .map-planet-dot {
+    stroke: #f8fdff;
+    stroke-opacity: 0.88;
+    stroke-width: 3;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 10px rgba(79, 195, 255, 0.72));
+  }
+
+  .map-planet.map-overlay-selected .map-planet-dot {
+    stroke: #ffef9a;
+    stroke-width: 6;
+  }
+
+  .map-planet-label {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 900;
+    paint-order: stroke fill;
+    pointer-events: none;
+    stroke: #020407;
+    stroke-width: 5;
+    text-anchor: middle;
+  }
+
+  .map-ship {
+    cursor: move;
+  }
+
+  .map-ship-icon {
+    stroke: #020407;
+    stroke-linejoin: round;
+    stroke-width: 5;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 10px rgba(255, 239, 154, 0.68));
+  }
+
+  .map-ship.map-overlay-selected .map-ship-icon {
+    stroke: #f8fdff;
+    stroke-width: 8;
+  }
+
+  .map-ship-label {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 900;
+    paint-order: stroke fill;
+    pointer-events: none;
+    stroke: #020407;
+    stroke-width: 5;
+    text-anchor: middle;
+  }
+
   .map-label {
     position: absolute;
     border: 0;
