@@ -303,6 +303,203 @@
     text-transform: uppercase;
   }
 
+  .inspiration-hero {
+    display: grid;
+    gap: 10px;
+    border: 1px solid rgba(79, 195, 255, 0.3);
+    background: linear-gradient(180deg, rgba(9, 16, 24, 0.72), rgba(4, 8, 13, 0.72));
+    padding: 28px;
+    box-shadow:
+      inset 0 0 34px rgba(79, 195, 255, 0.06),
+      0 14px 34px rgba(0, 0, 0, 0.28);
+  }
+
+  .inspiration-hero p,
+  .inspiration-section-heading p {
+    color: #4fc3ff;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .inspiration-hero h1,
+  .inspiration-section-heading h2 {
+    color: #f8fdff;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .inspiration-hero h1 {
+    font-size: clamp(3rem, 8vw, 6.5rem);
+  }
+
+  .inspiration-hero span {
+    max-width: 780px;
+    color: rgba(217, 245, 255, 0.78);
+    font-size: 18px;
+    line-height: 1.6;
+  }
+
+  .inspiration-panel {
+    display: grid;
+    gap: 22px;
+    border: 1px solid rgba(79, 195, 255, 0.3);
+    background: rgba(9, 16, 24, 0.64);
+    padding: 24px;
+    box-shadow:
+      inset 0 0 28px rgba(79, 195, 255, 0.04),
+      0 10px 28px rgba(0, 0, 0, 0.22);
+  }
+
+  .inspiration-section-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 18px;
+    border-bottom: 1px solid rgba(79, 195, 255, 0.22);
+    padding-bottom: 16px;
+  }
+
+  .inspiration-section-heading h2 {
+    margin-top: 6px;
+    font-size: 34px;
+  }
+
+  .inspiration-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .inspiration-tabs button,
+  .spark-random-button {
+    border: 1px solid rgba(79, 195, 255, 0.38);
+    background: rgba(79, 195, 255, 0.1);
+    padding: 10px 13px;
+    color: rgba(217, 245, 255, 0.82);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    text-transform: uppercase;
+    transition:
+      border-color 160ms ease,
+      background 160ms ease,
+      box-shadow 160ms ease,
+      color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .inspiration-tabs button:hover,
+  .inspiration-tabs .inspiration-tab-active,
+  .spark-random-button:hover {
+    border-color: #9be7ff;
+    background: rgba(79, 195, 255, 0.18);
+    color: #f8fdff;
+    box-shadow: 0 0 18px rgba(79, 195, 255, 0.34);
+    transform: translateY(-1px);
+  }
+
+  .mood-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .mood-card {
+    display: grid;
+    gap: 12px;
+    border: 1px solid rgba(79, 195, 255, 0.24);
+    background: rgba(4, 8, 13, 0.48);
+    padding: 12px;
+  }
+
+  .mood-card img,
+  .mood-video,
+  .mood-placeholder {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid rgba(79, 195, 255, 0.26);
+    background: rgba(3, 7, 12, 0.7);
+  }
+
+  .mood-placeholder {
+    background:
+      linear-gradient(135deg, rgba(79, 195, 255, 0.08) 0 25%, transparent 25% 50%, rgba(79, 195, 255, 0.08) 50% 75%, transparent 75%),
+      rgba(3, 7, 12, 0.7);
+    background-size: 28px 28px;
+  }
+
+  .mood-card img {
+    display: block;
+    object-fit: cover;
+  }
+
+  .mood-video iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  .mood-card h3,
+  .setting-grid h3 {
+    color: #f8fdff;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  .mood-card p,
+  .setting-grid p {
+    margin-top: 6px;
+    color: rgba(217, 245, 255, 0.76);
+    line-height: 1.55;
+  }
+
+  .spark-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .spark-grid article,
+  .setting-grid article {
+    border: 1px solid rgba(79, 195, 255, 0.24);
+    background: rgba(3, 7, 12, 0.38);
+    padding: 18px;
+  }
+
+  .spark-grid span {
+    display: block;
+    color: rgba(217, 245, 255, 0.62);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .spark-grid strong {
+    display: block;
+    margin-top: 8px;
+    color: #fff2a7;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1.15;
+  }
+
+  .setting-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
   .site-footer {
     position: relative;
     z-index: 20;
@@ -554,6 +751,7 @@
   .game-log-page,
   .roll-log-page,
   .primer-page,
+  .inspiration-page,
   .profile-page,
   .admin-page,
   .error-page {
@@ -6033,6 +6231,9 @@ input[type='reset'] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .mood-grid,
+  .spark-grid,
+  .setting-grid,
   .bestiary-charts,
   .bestiary-tools,
   .bestiary-grid,
@@ -6054,6 +6255,15 @@ input[type='reset'] {
   .faction-grid,
   .faction-facts {
     grid-template-columns: 1fr;
+  }
+
+  .inspiration-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inspiration-tabs {
+    justify-content: flex-start;
   }
 
   .wizard-attribute-field {

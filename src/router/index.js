@@ -1,7 +1,9 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import AdminView from '../views/AdminView.vue'
 import HomeView from '../views/HomeView.vue'
+import InspirationView from '../views/InspirationView.vue'
 import AboutView from '../views/AboutView.vue'
+import BazaarView from '../views/BazaarView.vue'
 import BestiaryView from '../views/BestiaryView.vue'
 import CanvasView from '../views/CanvasView.vue'
 import CharactersView from '../views/CharactersView.vue'
@@ -54,6 +56,11 @@ const router = createRouter({
       component: BestiaryView,
     },
     {
+      path: '/bazaar',
+      name: 'bazaar',
+      component: BazaarView,
+    },
+    {
       path: '/combat',
       name: 'combat',
       component: CombatView,
@@ -99,8 +106,8 @@ const router = createRouter({
     {
       path: '/Inspiration',
       name: 'inspiration',
-      component: PlaceholderView,
-      props: { title: 'Inspiration' },
+      component: InspirationView,
+      alias: '/inspiration',
     },
     {
       path: '/Planets',

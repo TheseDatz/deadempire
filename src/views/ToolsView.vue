@@ -2,6 +2,7 @@
 const tools = [
   { label: 'Combat', to: '/combat' },
   { label: 'Space Combat', to: '/space-combat' },
+  { label: 'Bazaar', to: '/bazaar' },
   { label: 'Canvas', to: '/canvas' },
   { label: 'Inspiration', to: '/Inspiration' },
   { label: 'Bestiary', to: '/bestiary' },
